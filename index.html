@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoShelf - MindTech</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a2a, #1a2a6c, #2a3a9c); color: #fff; min-height: 100vh; padding: 15px; }
+        .container { max-width: 100%; margin: 0 auto; }
+        
+        /* Auth Screens */
+        .auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a2a, #1a2a6c);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #00ffff;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: #00ffff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .auth-tab.active {
+            background: #00ffff;
+            color: #0a0a2a;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 5px; 
+            margin-bottom: 15px; 
+            text-align: left;
+        }
+        
+        .form-group label { 
+            font-size: 0.9rem; 
+            font-weight: bold; 
+            color: #00ffff;
+        }
+        
+        .form-group input, .form-group select { 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.1); 
+            color: white; 
+        }
+        
+        /* Main App */
+        .main-app { display: none; }
+        header { text-align: center; padding: 15px 0; margin-bottom: 20px; }
+        h1 { font-size: 2rem; color: #00ffff; margin-bottom: 5px; text-shadow: 0 0 10px #00ffff; }
+        .card { background: rgba(0,0,0,0.7); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(0,255,255,0.3); }
+        
+        /* User Menu */
+        .user-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #00ffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0a0a2a;
+            cursor: pointer;
+        }
+        
+        /* Billing Styles */
+        .plan-card {
+            background: linear-gradient(135deg, #00a8ff, #00ffff);
+            color: #0a0a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .plan-features {
+            text-align: left;
+            margin: 15px 0;
+        }
+        
+        .plan-features li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .plan-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        /* Scanner Styles */
+        .scanner-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .scanner-container {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background: #000;
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px #00ffff;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-laser {
+            position: absolute;
+            top: 0;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00ffff, #ff0080, #00ffff, transparent);
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #ff0080;
+            animation: scan 2s linear infinite;
+        }
+        
+        .btn { 
+            padding: 14px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: all 0.3s; 
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary { background: #00a8ff; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-premium { 
+            background: linear-gradient(45deg, #ff0080, #00ffff); 
+            color: white; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+        }
+        
+        .btn-logout {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .inventory-item { 
+            background: rgba(255,255,255,0.1); 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            border-left: 4px solid #00ffff; 
+        }
+        
+        .batch-number { color: #00ffff; font-weight: bold; }
+        
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #27ae60;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.8; }
+            100% { top: 0; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <h1 style="margin-bottom: 20px;">🛒 ChronoShelf</h1>
+            <p style="margin-bottom: 20px; color: #00ffff;">Enterprise Inventory Management</p>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthForm('login')">Login</button>
+                <button class="auth-tab" onclick="showAuthForm('register')">Register</button>
+                <button class="auth-tab" onclick="showAuthForm('pricing')">Pricing</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary" onclick="login()">🔐 Login</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('reset')">Forgot password?</a>
+                </p>
+            </div>
+            
+            <!-- Register Form -->
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" id="registerBusiness" placeholder="Your Store Name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select id="registerPlan">
+                        <option value="free">Free Trial - 14 Days</option>
+                        <option value="starter">Starter - R99/month</option>
+                        <option value="business">Business - R299/month</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="register()">🚀 Start Free Trial</button>
+            </div>
+            
+            <!-- Pricing Form -->
+            <div class="auth-form" id="pricingForm">
+                <div class="plan-card">
+                    <h3>Free Trial</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R0</div>
+                    <div style="font-size: 0.9rem;">14 days free</div>
+                </div>
+                
+                <div class="plan-card">
+                    <h3>Starter</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R99</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                
+                <div class="plan-card">
+                    <h3>Business</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R299</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                
+                <button class="btn btn-premium" onclick="showAuthForm('register')">💳 Start Free Trial</button>
+            </div>
+            
+            <!-- Reset Password Form -->
+            <div class="auth-form" id="resetForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="resetEmail" placeholder="your@business.com">
+                </div>
+                <button class="btn btn-primary" onclick="resetPassword()">📧 Send Reset Link</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('login')">Back to login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-app" id="mainApp">
+        <!-- User Menu -->
+        <div class="user-menu">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="container">
+            <header>
+                <h1>🛒 ChronoShelf</h1>
+                <p>Welcome, <span id="userBusiness">Business Name</span></p>
+                <p style="font-size: 0.8rem; color: #00ffff;" id="userPlan">Free Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a></p>
+            </header>
+
+            <!-- Billing Card (Visible to all) -->
+            <div class="card" id="billingCard">
+                <h2>💳 Account & Billing</h2>
+                <div id="planStatus">
+                    <!-- Dynamic content based on user plan -->
+                </div>
+                <button class="btn btn-premium" onclick="showBilling()">🚀 Upgrade Plan</button>
+            </div>
+
+            <!-- Inventory Management (Rest of your existing app) -->
+            <div class="card" id="inventorySection">
+                <h2>📦 Add Product</h2>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" id="product-name" placeholder="Enter product name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Barcode</label>
+                        <input type="text" id="barcode" placeholder="Will be filled by scanner" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="product-category" required>
+                            <option value="dairy">Dairy</option>
+                            <option value="meat">Meat</option>
+                            <option value="produce">Produce</option>
+                            <option value="bakery">Bakery</option>
+                            <option value="frozen">Frozen</option>
+                            <option value="beverages">Beverages</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Batch Number</label>
+                        <input type="text" id="batch-number" placeholder="Auto-generated from barcode">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" id="expiry-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="quantity" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">➕ Add to Inventory</button>
+                </form>
+            </div>
+
+            <!-- Rest of your existing inventory dashboard and scanner code -->
+            <!-- ... (Include all your existing inventory HTML here) ... -->
+
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // ===== AUTHENTICATION SYSTEM =====
+        const AuthService = {
+            currentUser: null,
+            
+            init() {
+                // Check if user is logged in
+                const savedUser = localStorage.getItem('chronoshelf-user');
+                if (savedUser) {
+                    this.currentUser = JSON.parse(savedUser);
+                    this.showMainApp();
+                } else {
+                    this.showAuthScreen();
+                }
+            },
+            
+            showAuthScreen() {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+            },
+            
+            showMainApp() {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                
+                // Update UI with user info
+                document.getElementById('userBusiness').textContent = this.currentUser.businessName;
+                document.getElementById('userPlan').innerHTML = `${this.currentUser.plan} Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a>`;
+                document.getElementById('userAvatar').textContent = this.currentUser.businessName.charAt(0).toUpperCase();
+                
+                this.updateBillingDisplay();
+            },
+            
+            async login(email, password) {
+                // Simulate API call
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (user) {
+                    this.currentUser = user;
+                    localStorage.setItem('chronoshelf-user', JSON.stringify(user));
+                    this.showMainApp();
+                    showNotification('🔐 Login successful!');
+                    return true;
+                } else {
+                    showNotification('❌ Invalid email or password');
+                    return false;
+                }
+            },
+            
+            async register(businessName, email, password, plan) {
+                // Simulate API call
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                
+                // Check if user exists
+                if (users.find(u => u.email === email)) {
+                    showNotification('❌ User already exists');
+                    return false;
+                }
+                
+                const newUser = {
+                    id: Date.now(),
+                    businessName,
+                    email,
+                    password, // In production, this would be hashed
+                    plan: plan === 'free' ? 'free-trial' : plan,
+                    trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+                    createdAt: new Date().toISOString(),
+                    subscriptionStatus: 'active'
+                };
+                
+                users.push(newUser);
+                localStorage.setItem('chronoshelf-users', JSON.stringify(users));
+                
+                this.currentUser = newUser;
+                localStorage.setItem('chronoshelf-user', JSON.stringify(newUser));
+                this.showMainApp();
+                showNotification('🎉 Welcome to ChronoShelf! 14-day free trial started.');
+                return true;
+            },
+            
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('chronoshelf-user');
+                this.showAuthScreen();
+                showNotification('👋 Logged out successfully');
+            },
+            
+            updateBillingDisplay() {
+                const planStatus = document.getElementById('planStatus');
+                const user = this.currentUser;
+                
+                if (user.plan === 'free-trial') {
+                    const daysLeft = Math.ceil((new Date(user.trialEnds) - new Date()) / (1000 * 60 * 60 * 24));
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(255,165,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>Free Trial</strong><br>
+                            <small>${daysLeft} days remaining • Upgrade to keep your data</small>
+                        </div>
+                    `;
+                } else {
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(39,174,96,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} Plan</strong><br>
+                            <small>Active • Next billing: ${new Date().toLocaleDateString()}</small>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // ===== BILLING & SUBSCRIPTION SYSTEM =====
+        const BillingService = {
+            async upgradePlan(plan) {
+                // Simulate Stripe integration
+                showNotification(`🔄 Processing ${plan} plan upgrade...`);
+                
+                setTimeout(() => {
+                    const user = AuthService.currentUser;
+                    user.plan = plan;
+                    user.subscriptionStatus = 'active';
+                    localStorage.setItem('chronoshelf-user', JSON.stringify(user));
+                    AuthService.updateBillingDisplay();
+                    showNotification(`🎉 Successfully upgraded to ${plan} plan!`);
+                }, 2000);
+            },
+            
+            async processPayment(paymentMethod) {
+                // Simulate payment processing
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({ success: true, transactionId: 'txn_' + Date.now() });
+                    }, 1500);
+                });
+            }
+        };
+
+        // ===== UI FUNCTIONS =====
+        function showAuthForm(formType) {
+            // Hide all forms
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // Remove active from all tabs
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected form
+            document.getElementById(formType + 'Form').classList.add('active');
+            
+            // Activate corresponding tab
+            event.target.classList.add('active');
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('❌ Please fill in all fields');
+                return;
+            }
+            
+            AuthService.login(email, password);
+        }
+
+        function register() {
+            const businessName = document.getElementById('registerBusiness').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const plan = document.getElementById('registerPlan').value;
+            
+            if (!businessName || !email || !password) {
+                showNotification('❌ Please fill in all fields');
+                return;
+            }
+            
+            AuthService.register(businessName, email, password, plan);
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            showNotification(`📧 Password reset link sent to ${email}`);
+        }
+
+        function logout() {
+            AuthService.logout();
+        }
+
+        function showBilling() {
+            showAuthForm('pricing');
+            AuthService.showAuthScreen();
+        }
+
+        function showNotification(msg) {
+            const notification = document.getElementById('notification');
+            notification.textContent = msg;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // ===== INITIALIZE APP =====
+        document.addEventListener('DOMContentLoaded', function() {
+            AuthService.init();
+            
+            // Set today's date for expiry field
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expiry-date').value = today;
+        });
+
+        // ===== YOUR EXISTING INVENTORY CODE =====
+        // ... (Include all your existing inventory JavaScript here) ...
+        // Make sure to modify saveInventory to check user permissions
+        // Add plan-based feature limitations
+
+        // Example plan limitations:
+        function checkPlanLimits() {
+            const user = AuthService.currentUser;
+            if (user.plan === 'free-trial') {
+                // Limit features for trial users
+                const inventory = JSON.parse(localStorage.getItem('chronoshelf-inventory') || '[]');
+                if (inventory.length >= 50) {
+                    showNotification('🚨 Free trial limited to 50 products. Upgrade to add more.');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Modify your existing product form submission:
+        document.getElementById('product-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!checkPlanLimits()) {
+                return;
+            }
+            
+            // Your existing product addition code
+            // ...
+        });
+
+    </script>
+</body>
+</html>
