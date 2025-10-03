@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoShelf - AI Inventory Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a2a, #1a2a6c, #2a3a9c); color: #fff; min-height: 100vh; padding: 15px; }
+        .container { max-width: 100%; margin: 0 auto; }
+        
+        /* Existing styles remain the same, adding new ones below */
+        
+        .enhanced-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .dropdown-search {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            margin-bottom: 5px;
+        }
+        
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,255,255,0.2);
+        }
+        
+        .dropdown-item:hover {
+            background: rgba(0,255,255,0.2);
+        }
+        
+        .product-suggestions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .suggestion-btn {
+            padding: 8px 12px;
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .manual-capture-btn {
+            background: linear-gradient(45deg, #ff0080, #00ffff);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Your existing HTML structure remains the same until the product form -->
+
+    <!-- Enhanced Add Product Card -->
+    <div class="card" id="inventorySection">
+        <h2>📦 Add Product - ENHANCED</h2>
+        <form id="product-form">
+            <div class="form-group">
+                <label>Category</label>
+                <select id="product-category" required onchange="updateProductDropdown()">
+                    <option value="">Select Category</option>
+                    <option value="dairy">Dairy & Eggs</option>
+                    <option value="meat">Meat & Poultry</option>
+                    <option value="produce">Fruits & Vegetables</option>
+                    <option value="bakery">Bakery & Bread</option>
+                    <option value="frozen">Frozen Foods</option>
+                    <option value="beverages">Beverages</option>
+                    <option value="canned">Canned Goods</option>
+                    <option value="snacks">Snacks & Sweets</option>
+                    <option value="cleaning">Cleaning Supplies</option>
+                    <option value="personal">Personal Care</option>
+                    <option value="baby">Baby Products</option>
+                    <option value="pet">Pet Supplies</option>
+                    <option value="health">Health & Wellness</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Product Name</label>
+                <div class="enhanced-dropdown">
+                    <input type="text" id="product-name" placeholder="Start typing or select from dropdown" 
+                           onfocus="showProductDropdown()" oninput="filterProducts()">
+                    <div class="dropdown-list" id="product-dropdown"></div>
+                </div>
+                
+                <!-- Quick Suggestions -->
+                <div class="product-suggestions" id="product-suggestions"></div>
+                
+                <!-- Manual Capture Button -->
+                <button type="button" class="manual-capture-btn" onclick="openManualCapture()">
+                    📝 Manual Product Capture
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label>Barcode</label>
+                <input type="text" id="barcode" placeholder="Auto-filled from product selection">
+                <div id="barcode-type" class="barcode-type" style="display: none;"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Brand</label>
+                <input type="text" id="product-brand" placeholder="Auto-filled from selection">
+            </div>
+
+            <div class="form-group">
+                <label>Size/Weight</label>
+                <input type="text" id="product-size" placeholder="e.g., 500g, 2L, 12 pack">
+            </div>
+
+            <div class="form-group">
+                <label>Batch Number</label>
+                <input type="text" id="batch-number" placeholder="Auto-generated">
+            </div>
+
+            <div class="form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="expiry-date" required>
+            </div>
+
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="quantity" value="1" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Price (R)</label>
+                <input type="number" id="product-price" step="0.01" placeholder="0.00">
+            </div>
+
+            <button type="submit" class="btn btn-primary">➕ Add to Inventory</button>
+        </form>
+    </div>
+
+    <!-- Manual Capture Modal -->
+    <div class="scanner-modal" id="manualCaptureModal">
+        <h2 style="color: #00ffff; margin-bottom: 20px;">📝 Manual Product Capture</h2>
+        
+        <div class="form-group">
+            <label>Product Name</label>
+            <input type="text" id="manual-product-name" placeholder="Enter product name">
+        </div>
+        
+        <div class="form-group">
+            <label>Brand</label>
+            <input type="text" id="manual-brand" placeholder="Enter brand">
+        </div>
+        
+        <div class="form-group">
+            <label>Category</label>
+            <select id="manual-category">
+                <option value="dairy">Dairy & Eggs</option>
+                <option value="meat">Meat & Poultry</option>
+                <option value="produce">Fruits & Vegetables</option>
+                <option value="bakery">Bakery & Bread</option>
+                <option value="frozen">Frozen Foods</option>
+                <option value="beverages">Beverages</option>
+                <option value="canned">Canned Goods</option>
+                <option value="snacks">Snacks & Sweets</option>
+                <option value="cleaning">Cleaning Supplies</option>
+                <option value="personal">Personal Care</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Size/Weight</label>
+            <input type="text" id="manual-size" placeholder="e.g., 500g, 2L">
+        </div>
+        
+        <div class="form-group">
+            <label>Barcode (Optional)</label>
+            <input type="text" id="manual-barcode" placeholder="Enter barcode if available">
+        </div>
+        
+        <div class="form-group">
+            <label>Price (R)</label>
+            <input type="number" id="manual-price" step="0.01" placeholder="0.00">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-success" onclick="saveManualProduct()">💾 Save Product</button>
+            <button class="btn btn-secondary" onclick="closeManualCapture()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // ===== MASSIVE PRODUCT DATABASE =====
+        const productDatabase = {
+            // DAIRY & EGGS
+            'dairy': [
+                { name: "Full Cream Milk 2L", brand: "Clover", barcode: "6001057001012", size: "2L", price: 34.99 },
+                { name: "Low Fat Milk 1L", brand: "Clover", barcode: "6001057001029", size: "1L", price: 18.99 },
+                { name: "Maas 500ml", brand: "Clover", barcode: "6001057001036", size: "500ml", price: 22.50 },
+                { name: "Amasi 1L", brand: "Clover", barcode: "6001057001043", size: "1L", price: 28.99 },
+                { name: "Greek Yogurt 500g", brand: "Danone", barcode: "8712345678901", size: "500g", price: 32.99 },
+                { name: "Strawberry Yogurt 175g", brand: "Danone", barcode: "8712345678902", size: "175g", price: 12.99 },
+                { name: "Butter 500g", brand: "Lurpak", barcode: "5712345678901", size: "500g", price: 65.99 },
+                { name: "Margarine 500g", brand: "Stork", barcode: "8712345678903", size: "500g", price: 28.50 },
+                { name: "Cheddar Cheese 400g", brand: "Lancewood", barcode: "6001057001050", size: "400g", price: 45.99 },
+                { name: "Mozzarella Cheese 250g", brand: "Lancewood", barcode: "6001057001067", size: "250g", price: 32.99 },
+                { name: "Feta Cheese 200g", brand: "Lancewood", barcode: "6001057001074", size: "200g", price: 38.50 },
+                { name: "Large Eggs 12 pack", brand: "Rainbow", barcode: "6001057001081", size: "12 eggs", price: 42.99 },
+                { name: "Free Range Eggs 6 pack", brand: "Nature's Choice", barcode: "6001057001098", size: "6 eggs", price: 28.99 },
+                { name: "Cream 250ml", brand: "Clover", barcode: "6001057001104", size: "250ml", price: 24.99 },
+                { name: "Sour Cream 250g", brand: "Clover", barcode: "6001057001111", size: "250g", price: 19.99 }
+            ],
+
+            // MEAT & POULTRY
+            'meat': [
+                { name: "Chicken Breast 500g", brand: "Fairview", barcode: "6001057002010", size: "500g", price: 65.99 },
+                { name: "Chicken Thighs 1kg", brand: "Fairview", barcode: "6001057002027", size: "1kg", price: 89.99 },
+                { name: "Whole Chicken 1.8kg", brand: "Fairview", barcode: "6001057002034", size: "1.8kg", price: 120.99 },
+                { name: "Beef Mince 500g", brand: "Montagu", barcode: "6001057002041", size: "500g", price: 79.99 },
+                { name: "Beef Steak 400g", brand: "Montagu", barcode: "6001057002058", size: "400g", price: 95.99 },
+                { name: "Pork Chops 500g", brand: "Fairview", barcode: "6001057002065", size: "500g", price: 72.99 },
+                { name: "Boerewors 1kg", brand: "Woolworths", barcode: "6001057002072", size: "1kg", price: 110.99 },
+                { name: "Bacon 250g", brand: "Enterprise", barcode: "6001057002089", size: "250g", price: 45.99 },
+                { name: "Lamb Chops 500g", brand: "Montagu", barcode: "6001057002096", size: "500g", price: 125.99 },
+                { name: "Sausages 500g", brand: "Woolworths", barcode: "6001057002102", size: "500g", price: 55.99 }
+            ],
+
+            // FRUITS & VEGETABLES
+            'produce': [
+                { name: "Bananas 1kg", brand: "Fresh", barcode: "6001057003017", size: "1kg", price: 22.99 },
+                { name: "Apples 1kg", brand: "Granny Smith", barcode: "6001057003024", size: "1kg", price: 35.99 },
+                { name: "Oranges 1kg", brand: "Navel", barcode: "6001057003031", size: "1kg", price: 28.99 },
+                { name: "Tomatoes 500g", brand: "Fresh", barcode: "6001057003048", size: "500g", price: 18.99 },
+                { name: "Potatoes 2.5kg", brand: "Fresh", barcode: "6001057003055", size: "2.5kg", price: 45.99 },
+                { name: "Onions 1kg", brand: "Fresh", barcode: "6001057003062", size: "1kg", price: 25.99 },
+                { name: "Carrots 1kg", brand: "Fresh", barcode: "6001057003079", size: "1kg", price: 19.99 },
+                { name: "Lettuce", brand: "Iceberg", barcode: "6001057003086", size: "each", price: 15.99 },
+                { name: "Avocado", brand: "Hass", barcode: "6001057003093", size: "each", price: 12.99 },
+                { name: "Strawberries 250g", brand: "Fresh", barcode: "6001057003109", size: "250g", price: 32.99 }
+            ],
+
+            // BAKERY & BREAD
+            'bakery': [
+                { name: "White Bread 700g", brand: "Albany", barcode: "6001057004014", size: "700g", price: 18.99 },
+                { name: "Brown Bread 700g", brand: "Albany", barcode: "6001057004021", size: "700g", price: 20.99 },
+                { name: "Whole Wheat Bread", brand: "Sasko", barcode: "6001057004038", size: "700g", price: 19.99 },
+                { name: "Croissants 4 pack", brand: "Woolworths", barcode: "6001057004045", size: "4 pack", price: 32.99 },
+                { name: "Muffins 4 pack", brand: "Blue Ribbon", barcode: "6001057004052", size: "4 pack", price: 28.99 },
+                { name: "Baguette", brand: "Checkers", barcode: "6001057004069", size: "each", price: 15.99 },
+                { name: "Cinnamon Rolls 6 pack", brand: "Woolworths", barcode: "6001057004076", size: "6 pack", price: 45.99 }
+            ],
+
+            // BEVERAGES
+            'beverages': [
+                { name: "Coca-Cola 2L", brand: "Coca-Cola", barcode: "6001057005010", size: "2L", price: 24.99 },
+                { name: "Fanta Orange 2L", brand: "Coca-Cola", barcode: "6001057005027", size: "2L", price: 22.99 },
+                { name: "Sprite 2L", brand: "Coca-Cola", barcode: "6001057005034", size: "2L", price: 22.99 },
+                { name: "Orange Juice 1L", brand: "Liqui-Fruit", barcode: "6001057005041", size: "1L", price: 28.99 },
+                { name: "Apple Juice 1L", brand: "Cerese", barcode: "6001057005058", size: "1L", price: 26.99 },
+                { name: "Water 500ml", brand: "Aquelle", barcode: "6001057005065", size: "500ml", price: 12.99 },
+                { name: "Energy Drink 500ml", brand: "Red Bull", barcode: "9001057005072", size: "500ml", price: 32.99 },
+                { name: "Beer 340ml", brand: "Castle Lite", barcode: "6001057005089", size: "340ml", price: 18.99 }
+            ],
+
+            // SNACKS & SWEETS
+            'snacks': [
+                { name: "Potato Chips 150g", brand: "Lays", barcode: "6001057006017", size: "150g", price: 22.99 },
+                { name: "Chocolate Bar 100g", brand: "Cadbury", barcode: "6001057006024", size: "100g", price: 18.99 },
+                { name: "Cookies 200g", brand: "Ouma", barcode: "6001057006031", size: "200g", price: 28.99 },
+                { name: "Peanuts 200g", brand: "Willards", barcode: "6001057006048", size: "200g", price: 25.99 },
+                { name: "Energy Bar 50g", brand: "Nestle", barcode: "6001057006055", size: "50g", price: 12.99 }
+            ],
+
+            // CLEANING SUPPLIES
+            'cleaning': [
+                { name: "Dishwashing Liquid 750ml", brand: "Sunlight", barcode: "6001057007016", size: "750ml", price: 32.99 },
+                { name: "Laundry Detergent 2kg", brand: "OMO", barcode: "6001057007023", size: "2kg", price: 89.99 },
+                { name: "Toilet Cleaner 750ml", brand: "Domestos", barcode: "6001057007030", size: "750ml", price: 38.99 },
+                { name: "All Purpose Cleaner 500ml", brand: "Handy Andy", barcode: "6001057007047", size: "500ml", price: 28.99 },
+                { name: "Glass Cleaner 500ml", brand: "Windex", barcode: "6001057007054", size: "500ml", price: 35.99 }
+            ],
+
+            // PERSONAL CARE
+            'personal': [
+                { name: "Toothpaste 100ml", brand: "Colgate", barcode: "6001057008013", size: "100ml", price: 28.99 },
+                { name: "Shampoo 400ml", brand: "Head & Shoulders", barcode: "6001057008020", size: "400ml", price: 65.99 },
+                { name: "Body Soap 4 pack", brand: "Dove", barcode: "6001057008037", size: "4 pack", price: 45.99 },
+                { name: "Deodorant 150ml", brand: "Nivea", barcode: "6001057008044", size: "150ml", price: 38.99 },
+                { name: "Face Cream 50ml", brand: "Nivea", barcode: "6001057008051", size: "50ml", price: 55.99 }
+            ]
+        };
+
+        // ===== ENHANCED DROPDOWN SYSTEM =====
+        function updateProductDropdown() {
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            const suggestions = document.getElementById('product-suggestions');
+            
+            dropdown.innerHTML = '';
+            suggestions.innerHTML = '';
+            
+            if (category && productDatabase[category]) {
+                // Populate dropdown
+                productDatabase[category].forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = `${product.name} - ${product.brand} (${product.size})`;
+                    item.onclick = () => selectProduct(product);
+                    dropdown.appendChild(item);
+                });
+                
+                // Show popular suggestions
+                const popularProducts = productDatabase[category].slice(0, 4);
+                popularProducts.forEach(product => {
+                    const btn = document.createElement('div');
+                    btn.className = 'suggestion-btn';
+                    btn.textContent = product.name;
+                    btn.onclick = () => selectProduct(product);
+                    suggestions.appendChild(btn);
+                });
+            }
+        }
+
+        function showProductDropdown() {
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            
+            if (category && productDatabase[category]) {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('product-name').value.toLowerCase();
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            
+            if (category && productDatabase[category]) {
+                const filtered = productDatabase[category].filter(product => 
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.brand.toLowerCase().includes(searchTerm)
+                );
+                
+                dropdown.innerHTML = '';
+                filtered.forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = `${product.name} - ${product.brand} (${product.size})`;
+                    item.onclick = () => selectProduct(product);
+                    dropdown.appendChild(item);
+                });
+                
+                dropdown.style.display = filtered.length > 0 ? 'block' : 'none';
+            }
+        }
+
+        function selectProduct(product) {
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('barcode').value = product.barcode;
+            document.getElementById('product-brand').value = product.brand;
+            document.getElementById('product-size').value = product.size;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('batch-number').value = `BATCH-${product.barcode.slice(-6)}`;
+            
+            // Auto-set expiry date (30 days from now)
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+            
+            document.getElementById('product-dropdown').style.display = 'none';
+            
+            // Show barcode format
+            const validation = BarcodeService.validateBarcode(product.barcode);
+            const barcodeTypeElement = document.getElementById('barcode-type');
+            barcodeTypeElement.textContent = `Format: ${validation.format}`;
+            barcodeTypeElement.style.display = 'block';
+            
+            showNotification(`✅ ${product.name} selected!`);
+        }
+
+        // ===== MANUAL CAPTURE SYSTEM =====
+        function openManualCapture() {
+            document.getElementById('manualCaptureModal').style.display = 'flex';
+        }
+
+        function closeManualCapture() {
+            document.getElementById('manualCaptureModal').style.display = 'none';
+        }
+
+        function saveManualProduct() {
+            const name = document.getElementById('manual-product-name').value;
+            const brand = document.getElementById('manual-brand').value;
+            const category = document.getElementById('manual-category').value;
+            const size = document.getElementById('manual-size').value;
+            const barcode = document.getElementById('manual-barcode').value;
+            const price = document.getElementById('manual-price').value;
+            
+            if (!name) {
+                showNotification('❌ Please enter product name', 'error');
+                return;
+            }
+            
+            // Auto-generate barcode if not provided
+            const finalBarcode = barcode || BarcodeService.generateBarcode('EAN-13');
+            
+            // Fill the main form
+            document.getElementById('product-name').value = name;
+            document.getElementById('barcode').value = finalBarcode;
+            document.getElementById('product-brand').value = brand;
+            document.getElementById('product-size').value = size;
+            document.getElementById('product-price').value = price;
+            document.getElementById('product-category').value = category;
+            document.getElementById('batch-number').value = `BATCH-${finalBarcode.slice(-6)}`;
+            
+            // Auto-set expiry date
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+            
+            closeManualCapture();
+            showNotification(`✅ Manual product "${name}" captured!`);
+            
+            // Focus on quantity field
+            document.getElementById('quantity').focus();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.enhanced-dropdown')) {
+                document.getElementById('product-dropdown').style.display = 'none';
+            }
+        });
+
+        // Your existing BarcodeService and other functions remain the same
+        const BarcodeService = {
+            // ... (your existing barcode service code)
+        };
+
+        // Update product form submission to include new fields
+        document.getElementById('product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!checkPlanLimits()) return;
+            
+            const product = {
+                id: Date.now(),
+                name: document.getElementById('product-name').value,
+                barcode: document.getElementById('barcode').value,
+                brand: document.getElementById('product-brand').value,
+                size: document.getElementById('product-size').value,
+                category: document.getElementById('product-category').value,
+                batchNumber: document.getElementById('batch-number').value,
+                expiryDate: document.getElementById('expiry-date').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                price: parseFloat(document.getElementById('product-price').value) || 0,
+                addedDate: new Date().toISOString(),
+                barcodeFormat: BarcodeService.detectFormat(document.getElementById('barcode').value)
+            };
+            
+            inventory.push(product);
+            updateDisplay();
+            saveInventory();
+            showNotification('✅ Product added to inventory!');
+            
+            // Reset form but keep category
+            const currentCategory = document.getElementById('product-category').value;
+            this.reset();
+            document.getElementById('product-category').value = currentCategory;
+            document.getElementById('quantity').value = 1;
+            document.getElementById('expiry-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('barcode-type').style.display = 'none';
+        });
+
+        // Your existing updateDisplay function should now show brand, size, and price
+        function updateDisplay() {
+            // ... (your existing updateDisplay code, enhanced to show new fields)
+        }
+
+        // Rest of your existing code remains the same...
+    </script>
+</body>
+</html>
