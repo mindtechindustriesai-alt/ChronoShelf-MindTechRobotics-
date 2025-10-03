@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoShelf - AI Inventory Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a2a, #1a2a6c, #2a3a9c); color: #fff; min-height: 100vh; padding: 15px; }
+        .container { max-width: 100%; margin: 0 auto; }
+        
+        /* Auth Screens */
+        .auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a2a, #1a2a6c);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #00ffff;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: #00ffff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .auth-tab.active {
+            background: #00ffff;
+            color: #0a0a2a;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 5px; 
+            margin-bottom: 15px; 
+            text-align: left;
+        }
+        
+        .form-group label { 
+            font-size: 0.9rem; 
+            font-weight: bold; 
+            color: #00ffff;
+        }
+        
+        .form-group input, .form-group select { 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.1); 
+            color: white; 
+        }
+        
+        /* Main App */
+        .main-app { display: none; }
+        header { text-align: center; padding: 15px 0; margin-bottom: 20px; }
+        h1 { font-size: 2rem; color: #00ffff; margin-bottom: 5px; text-shadow: 0 0 10px #00ffff; }
+        .card { background: rgba(0,0,0,0.7); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(0,255,255,0.3); }
+        
+        /* User Menu */
+        .user-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #00ffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0a0a2a;
+            cursor: pointer;
+        }
+        
+        /* Billing Styles */
+        .plan-card {
+            background: linear-gradient(135deg, #00a8ff, #00ffff);
+            color: #0a0a2a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        /* Scanner Styles */
+        .scanner-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .scanner-container {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background: #000;
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px #00ffff;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-laser {
+            position: absolute;
+            top: 0;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00ffff, #ff0080, #00ffff, transparent);
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #ff0080;
+            animation: scan 2s linear infinite;
+        }
+        
+        .scanner-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .scan-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+        }
+        
+        .barcode-type {
+            background: rgba(0,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        
+        .btn { 
+            padding: 14px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: all 0.3s; 
+        }
+        
+        .btn-primary { background: #00a8ff; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-premium { 
+            background: linear-gradient(45deg, #ff0080, #00ffff); 
+            color: white; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+        }
+        
+        .btn-scan { 
+            background: linear-gradient(45deg, #ff0080, #00ffff); 
+            color: white; 
+            font-size: 1.1rem; 
+        }
+        
+        .btn-secondary { background: #1a2a6c; color: white; }
+        
+        .btn-logout {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .inventory-item { 
+            background: rgba(255,255,255,0.1); 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            border-left: 4px solid #00ffff; 
+        }
+        
+        .batch-number { color: #00ffff; font-weight: bold; }
+        
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+        }
+        
+        /* Alert Styles */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .expiry-critical {
+            animation: pulse 2s infinite;
+            background: rgba(255, 107, 107, 0.3) !important;
+            border-left: 4px solid #ff6b6b !important;
+        }
+        
+        .expiry-warning {
+            background: rgba(255, 165, 0, 0.3) !important;
+            border-left: 4px solid #ffa500 !important;
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #27ae60;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.5s;
+            max-width: 90%;
+            text-align: center;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        .notification.warning {
+            background: #e67e22;
+        }
+        
+        .notification.error {
+            background: #e74c3c;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.8; }
+            100% { top: 0; opacity: 1; }
+        }
+        
+        /* Barcode Preview */
+        .barcode-preview {
+            font-family: monospace;
+            background: white;
+            color: black;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        /* Scanner Camera Simulation */
+        .camera-feed {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ffff;
+            font-size: 1.2rem;
+            flex-direction: column;
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .scan-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 150px;
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+        }
+        
+        .scan-guide {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            background: #00ffff;
+            animation: scan 1.5s ease-in-out infinite;
+        }
+        
+        .format-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: #00ffff;
+        }
+        
+        /* Analytics Chart */
+        .analytics-chart {
+            width: 100%;
+            height: 200px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            align-items: flex-end;
+            padding: 10px;
+            gap: 5px;
+        }
+        
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, #00a8ff, #00ffff);
+            border-radius: 3px 3px 0 0;
+            position: relative;
+            min-height: 5px;
+        }
+        
+        .chart-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #00ffff;
+        }
+
+        /* Enhanced Dropdown Styles */
+        .enhanced-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .dropdown-search {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            margin-bottom: 5px;
+        }
+        
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: rgba(0,0,0,0.95);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,255,255,0.3);
+        }
+        
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(0,255,255,0.2);
+            transition: all 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background: rgba(0,255,255,0.2);
+        }
+        
+        .product-suggestions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .suggestion-btn {
+            padding: 10px 12px;
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .suggestion-btn:hover {
+            background: rgba(0,255,255,0.4);
+            transform: translateY(-2px);
+        }
+        
+        .manual-capture-btn {
+            background: linear-gradient(45deg, #ff0080, #00ffff);
+            color: white;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .manual-capture-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,0,128,0.4);
+        }
+
+        /* Save Button Enhancement */
+        .save-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.4);
+        }
+        
+        .save-btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .quick-action-btn {
+            padding: 12px;
+            background: rgba(0,255,255,0.1);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .quick-action-btn:hover {
+            background: rgba(0,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Search Bar */
+        .search-bar {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        /* Low Stock Warning */
+        .low-stock {
+            background: rgba(255, 165, 0, 0.3) !important;
+            border-left: 4px solid #ffa500 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <h1 style="margin-bottom: 20px;">🛒 ChronoShelf</h1>
+            <p style="margin-bottom: 20px; color: #00ffff;">AI Powered Inventory Management System</p>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthForm('login')">Login</button>
+                <button class="auth-tab" onclick="showAuthForm('register')">Register</button>
+                <button class="auth-tab" onclick="showAuthForm('pricing')">Pricing</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary" onclick="login()">🔐 Login</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('reset')">Forgot password?</a>
+                </p>
+            </div>
+            
+            <!-- Register Form -->
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" id="registerBusiness" placeholder="Your Store Name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select id="registerPlan">
+                        <option value="free">Free Trial - 14 Days</option>
+                        <option value="starter">Starter - R99/month</option>
+                        <option value="business">Business - R299/month</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="register()">🚀 Start Free Trial</button>
+            </div>
+            
+            <!-- Pricing Form -->
+            <div class="auth-form" id="pricingForm">
+                <div class="plan-card">
+                    <h3>Free Trial</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R0</div>
+                    <div style="font-size: 0.9rem;">14 days free</div>
+                </div>
+                
+                <div class="plan-card">
+                    <h3>Starter</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R99</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                
+                <div class="plan-card">
+                    <h3>Business</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R299</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                
+                <button class="btn btn-premium" onclick="showAuthForm('register')">💳 Start Free Trial</button>
+            </div>
+            
+            <!-- Reset Password Form -->
+            <div class="auth-form" id="resetForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="resetEmail" placeholder="your@business.com">
+                </div>
+                <button class="btn btn-primary" onclick="resetPassword()">📧 Send Reset Link</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('login')">Back to login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-app" id="mainApp">
+        <!-- User Menu -->
+        <div class="user-menu">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="container">
+            <header>
+                <h1>🛒 ChronoShelf</h1>
+                <p>AI Powered Inventory Management System</p>
+                <p style="font-size: 0.8rem; color: #00ffff;" id="userPlan">Free Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a></p>
+            </header>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h2>⚡ Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="openScanner()">
+                        <div style="font-size: 1.5rem;">🔍</div>
+                        <div>Scan Product</div>
+                    </button>
+                    <button class="quick-action-btn" onclick="openManualCapture()">
+                        <div style="font-size: 1.5rem;">📝</div>
+                        <div>Manual Add</div>
+                    </button>
+                    <button class="quick-action-btn" onclick="exportData()">
+                        <div style="font-size: 1.5rem;">💾</div>
+                        <div>Export Data</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Billing Card -->
+            <div class="card" id="billingCard">
+                <h2>💳 Account & Billing</h2>
+                <div id="planStatus">
+                    <!-- Dynamic content based on user plan -->
+                </div>
+                <button class="btn btn-premium" onclick="showBilling()">🚀 Upgrade Plan</button>
+            </div>
+
+            <!-- Add Product Card -->
+            <div class="card" id="inventorySection">
+                <h2>📦 Add Product</h2>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="product-category" required onchange="updateProductDropdown()">
+                            <option value="">Select Category</option>
+                            <option value="dairy">Dairy & Eggs</option>
+                            <option value="meat">Meat & Poultry</option>
+                            <option value="produce">Fruits & Vegetables</option>
+                            <option value="bakery">Bakery & Bread</option>
+                            <option value="frozen">Frozen Foods</option>
+                            <option value="beverages">Beverages</option>
+                            <option value="canned">Canned Goods</option>
+                            <option value="snacks">Snacks & Sweets</option>
+                            <option value="cleaning">Cleaning Supplies</option>
+                            <option value="personal">Personal Care</option>
+                            <option value="baby">Baby Products</option>
+                            <option value="pet">Pet Supplies</option>
+                            <option value="health">Health & Wellness</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <div class="enhanced-dropdown">
+                            <input type="text" id="product-name" placeholder="Start typing or select from dropdown" 
+                                   onfocus="showProductDropdown()" oninput="filterProducts()">
+                            <div class="dropdown-list" id="product-dropdown"></div>
+                        </div>
+                        
+                        <!-- Quick Suggestions -->
+                        <div class="product-suggestions" id="product-suggestions"></div>
+                        
+                        <!-- Manual Capture Button -->
+                        <button type="button" class="manual-capture-btn" onclick="openManualCapture()">
+                            📝 Manual Product Capture
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Barcode</label>
+                        <input type="text" id="barcode" placeholder="Auto-filled from product selection">
+                        <div id="barcode-type" class="barcode-type" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <input type="text" id="product-brand" placeholder="Auto-filled from selection">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Size/Weight</label>
+                        <input type="text" id="product-size" placeholder="e.g., 500g, 2L, 12 pack">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Batch Number</label>
+                        <input type="text" id="batch-number" placeholder="Auto-generated">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" id="expiry-date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="quantity" value="1" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Price (R)</label>
+                        <input type="number" id="product-price" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <button type="submit" class="save-btn">💾 SAVE PRODUCT</button>
+                </form>
+            </div>
+
+            <!-- Inventory Dashboard -->
+            <div class="card">
+                <h2>📊 Inventory Dashboard</h2>
+                
+                <!-- Search Bar -->
+                <input type="text" class="search-bar" id="inventory-search" placeholder="🔍 Search products..." oninput="filterInventory()">
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-items">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="expiring-soon">0</div>
+                        <div class="stat-label">Expiring Soon</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-value">R0</div>
+                        <div class="stat-label">Total Value</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="waste-risk">0%</div>
+                        <div class="stat-label">Waste Risk</div>
+                    </div>
+                </div>
+                
+                <!-- Analytics Chart -->
+                <div id="analytics-container" style="display: none;">
+                    <h3 style="margin-top: 15px; margin-bottom: 10px; color: #00ffff;">📈 Inventory Analytics</h3>
+                    <div class="analytics-chart" id="analytics-chart"></div>
+                </div>
+                
+                <div id="inventory-list" style="margin-top: 15px;">
+                    <div class="inventory-item">No products yet. Add your first product!</div>
+                </div>
+            </div>
+
+            <!-- Enhanced Actions -->
+            <div class="card">
+                <h2>⚡ Enhanced Actions</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <button class="btn btn-scan" onclick="openScanner()">🔦 AI Scanner</button>
+                    <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Import Data</button>
+                    <button class="btn btn-secondary" onclick="clearData()">🗑️ Clear All</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                <div style="margin-top: 10px; font-size: 0.8rem; text-align: center; color: #00ffff;">
+                    <span id="online-status">🌐 Online</span> • 
+                    <span id="item-count">0 items</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                <p style="font-size: 0.9rem;"><strong>Powered by MindTech</strong> - Revolutionizing Inventory Management</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div class="scanner-modal" id="scannerModal">
+        <div class="scanner-container">
+            <div class="camera-feed">
+                <div class="camera-overlay">
+                    <div class="scan-frame"></div>
+                    <div class="scan-guide"></div>
+                    <div class="format-indicator" id="formatIndicator">AUTO-DETECT</div>
+                </div>
+                <div>🔍 AI Barcode Scanner</div>
+                <div style="font-size: 0.8rem; margin-top: 5px;">Position barcode within frame</div>
+            </div>
+        </div>
+        
+        <h3 style="color: #00ffff; margin-bottom: 15px;">SCAN BARCODE OR ENTER MANUALLY</h3>
+        
+        <input type="text" class="scanner-input" id="manualBarcode" placeholder="Type barcode number here" maxlength="20">
+        <div id="scanned-barcode-preview" class="barcode-preview" style="display: none;"></div>
+        
+        <div class="scan-options">
+            <button class="btn btn-primary" onclick="processManualBarcode()">✅ Process Barcode</button>
+            <button class="btn btn-secondary" onclick="generateRandomBarcode()">🎲 Random Product</button>
+        </div>
+        
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('1234567890123')">🥛 Milk (EAN-13)</button>
+            <button class="btn btn-secondary" onclick="quickScan('614141007349')">🍞 Bread (UPC-A)</button>
+        </div>
+        
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('345678901234')">🍗 Chicken (CODE-128)</button>
+            <button class="btn btn-secondary" onclick="quickScan('4567890123456')">🍎 Apples (EAN-13)</button>
+        </div>
+
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('7890123456789')">🥛 Yogurt (EAN-13)</button>
+            <button class="btn btn-secondary" onclick="quickScan('8901234567890')">🥩 Beef (EAN-13)</button>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="closeScanner()" style="margin-top: 10px; width: 100%; max-width: 400px;">Cancel</button>
+    </div>
+
+    <!-- Manual Capture Modal -->
+    <div class="scanner-modal" id="manualCaptureModal">
+        <h2 style="color: #00ffff; margin-bottom: 20px;">📝 Manual Product Capture</h2>
+        
+        <div class="form-group">
+            <label>Product Name</label>
+            <input type="text" id="manual-product-name" placeholder="Enter product name">
+        </div>
+        
+        <div class="form-group">
+            <label>Brand</label>
+            <input type="text" id="manual-brand" placeholder="Enter brand">
+        </div>
+        
+        <div class="form-group">
+            <label>Category</label>
+            <select id="manual-category">
+                <option value="dairy">Dairy & Eggs</option>
+                <option value="meat">Meat & Poultry</option>
+                <option value="produce">Fruits & Vegetables</option>
+                <option value="bakery">Bakery & Bread</option>
+                <option value="frozen">Frozen Foods</option>
+                <option value="beverages">Beverages</option>
+                <option value="canned">Canned Goods</option>
+                <option value="snacks">Snacks & Sweets</option>
+                <option value="cleaning">Cleaning Supplies</option>
+                <option value="personal">Personal Care</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Size/Weight</label>
+            <input type="text" id="manual-size" placeholder="e.g., 500g, 2L">
+        </div>
+        
+        <div class="form-group">
+            <label>Barcode (Optional)</label>
+            <input type="text" id="manual-barcode" placeholder="Enter barcode if available">
+        </div>
+        
+        <div class="form-group">
+            <label>Price (R)</label>
+            <input type="number" id="manual-price" step="0.01" placeholder="0.00">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+            <button class="save-btn" onclick="saveManualProduct()">💾 SAVE PRODUCT</button>
+            <button class="btn btn-secondary" onclick="closeManualCapture()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // ===== AUTHENTICATION SYSTEM =====
+        const AuthService = {
+            currentUser: null,
+            
+            init() {
+                const savedUser = localStorage.getItem('chronoshelf-user');
+                if (savedUser) {
+                    this.currentUser = JSON.parse(savedUser);
+                    this.showMainApp();
+                } else {
+                    this.showAuthScreen();
+                }
+            },
+            
+            showAuthScreen() {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+            },
+            
+            showMainApp() {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                
+                document.getElementById('userBusiness').textContent = this.currentUser?.businessName || 'Business Name';
+                document.getElementById('userPlan').innerHTML = `${this.currentUser?.plan || 'Free'} Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a>`;
+                document.getElementById('userAvatar').textContent = (this.currentUser?.businessName?.charAt(0) || 'U').toUpperCase();
+                
+                this.updateBillingDisplay();
+                updateDisplay(); // Initialize inventory display
+            },
+            
+            async login(email, password) {
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (user) {
+                    this.currentUser = user;
+                    localStorage.setItem('chronoshelf-user', JSON.stringify(user));
+                    this.showMainApp();
+                    showNotification('🔐 Login successful!');
+                    return true;
+                } else {
+                    showNotification('❌ Invalid email or password', 'error');
+                    return false;
+                }
+            },
+            
+            async register(businessName, email, password, plan) {
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                
+                if (users.find(u => u.email === email)) {
+                    showNotification('❌ User already exists', 'error');
+                    return false;
+                }
+                
+                const newUser = {
+                    id: Date.now(),
+                    businessName,
+                    email,
+                    password,
+                    plan: plan === 'free' ? 'free-trial' : plan,
+                    trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+                    createdAt: new Date().toISOString(),
+                    subscriptionStatus: 'active'
+                };
+                
+                users.push(newUser);
+                localStorage.setItem('chronoshelf-users', JSON.stringify(users));
+                
+                this.currentUser = newUser;
+                localStorage.setItem('chronoshelf-user', JSON.stringify(newUser));
+                this.showMainApp();
+                showNotification('🎉 Welcome to ChronoShelf! 14-day free trial started.');
+                return true;
+            },
+            
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('chronoshelf-user');
+                this.showAuthScreen();
+                showNotification('👋 Logged out successfully');
+            },
+            
+            updateBillingDisplay() {
+                const planStatus = document.getElementById('planStatus');
+                const user = this.currentUser;
+                
+                if (!user) return;
+                
+                if (user.plan === 'free-trial') {
+                    const daysLeft = Math.ceil((new Date(user.trialEnds) - new Date()) / (1000 * 60 * 60 * 24));
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(255,165,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>Free Trial</strong><br>
+                            <small>${daysLeft} days remaining • Upgrade to keep your data</small>
+                        </div>
+                    `;
+                } else {
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(39,174,96,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} Plan</strong><br>
+                            <small>Active • Next billing: ${new Date().toLocaleDateString()}</small>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // ===== ENHANCED BARCODE SYSTEM =====
+        const BarcodeService = {
+            formats: {
+                'EAN-13': /^\d{13}$/,
+                'UPC-A': /^\d{12}$/,
+                'CODE-128': /^[A-Za-z0-9\-\.\$\+\%\/\s]{1,20}$/,
+                'CODE-39': /^[A-Z0-9\-\s\.\+\$\/\%]{1,20}$/,
+                'ITF': /^\d{14}$/
+            },
+            
+            detectFormat(barcode) {
+                for (const [format, regex] of Object.entries(this.formats)) {
+                    if (regex.test(barcode)) {
+                        return format;
+                    }
+                }
+                return 'UNKNOWN';
+            },
+            
+            validateBarcode(barcode) {
+                const format = this.detectFormat(barcode);
+                let isValid = false;
+                
+                switch(format) {
+                    case 'EAN-13':
+                        isValid = this.validateEAN13(barcode);
+                        break;
+                    case 'UPC-A':
+                        isValid = this.validateUPCA(barcode);
+                        break;
+                    default:
+                        isValid = barcode.length > 0;
+                }
+                
+                return { format, isValid };
+            },
+            
+            validateEAN13(barcode) {
+                if (barcode.length !== 13) return false;
+                
+                let sum = 0;
+                for (let i = 0; i < 12; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit : digit * 3;
+                }
+                const checksum = (10 - (sum % 10)) % 10;
+                return checksum === parseInt(barcode[12]);
+            },
+            
+            validateUPCA(barcode) {
+                if (barcode.length !== 12) return false;
+                
+                let sum = 0;
+                for (let i = 0; i < 11; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit * 3 : digit;
+                }
+                const checksum = (10 - (sum % 10)) % 10;
+                return checksum === parseInt(barcode[11]);
+            },
+            
+            generateBarcode(format) {
+                switch(format) {
+                    case 'EAN-13':
+                        return this.generateEAN13();
+                    case 'UPC-A':
+                        return this.generateUPCA();
+                    case 'CODE-128':
+                        return this.generateCode128();
+                    default:
+                        return this.generateRandomDigits(13);
+                }
+            },
+            
+            generateEAN13() {
+                let barcode = '2' + this.generateRandomDigits(11);
+                let sum = 0;
+                for (let i = 0; i < 12; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit : digit * 3;
+                }
+                const checksum = (10 - (sum % 10)) % 10;
+                return barcode + checksum;
+            },
+            
+            generateUPCA() {
+                let barcode = this.generateRandomDigits(11);
+                let sum = 0;
+                for (let i = 0; i < 11; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit * 3 : digit;
+                }
+                const checksum = (10 - (sum % 10)) % 10;
+                return barcode + checksum;
+            },
+            
+            generateCode128() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let result = '';
+                for (let i = 0; i < 10; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            },
+            
+            generateRandomDigits(length) {
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += Math.floor(Math.random() * 10);
+                }
+                return result;
+            }
+        };
+
+        // ===== MASSIVE PRODUCT DATABASE =====
+        const productDatabase = {
+            // DAIRY & EGGS
+            'dairy': [
+                { name: "Full Cream Milk 2L", brand: "Clover", barcode: "6001057001012", size: "2L", price: 34.99 },
+                { name: "Low Fat Milk 1L", brand: "Clover", barcode: "6001057001029", size: "1L", price: 18.99 },
+                { name: "Maas 500ml", brand: "Clover", barcode: "6001057001036", size: "500ml", price: 22.50 },
+                { name: "Amasi 1L", brand: "Clover", barcode: "6001057001043", size: "1L", price: 28.99 },
+                { name: "Greek Yogurt 500g", brand: "Danone", barcode: "8712345678901", size: "500g", price: 32.99 },
+                { name: "Strawberry Yogurt 175g", brand: "Danone", barcode: "8712345678902", size: "175g", price: 12.99 },
+                { name: "Butter 500g", brand: "Lurpak", barcode: "5712345678901", size: "500g", price: 65.99 },
+                { name: "Margarine 500g", brand: "Stork", barcode: "8712345678903", size: "500g", price: 28.50 },
+                { name: "Cheddar Cheese 400g", brand: "Lancewood", barcode: "6001057001050", size: "400g", price: 45.99 },
+                { name: "Mozzarella Cheese 250g", brand: "Lancewood", barcode: "6001057001067", size: "250g", price: 32.99 },
+                { name: "Feta Cheese 200g", brand: "Lancewood", barcode: "6001057001074", size: "200g", price: 38.50 },
+                { name: "Large Eggs 12 pack", brand: "Rainbow", barcode: "6001057001081", size: "12 eggs", price: 42.99 },
+                { name: "Free Range Eggs 6 pack", brand: "Nature's Choice", barcode: "6001057001098", size: "6 eggs", price: 28.99 },
+                { name: "Cream 250ml", brand: "Clover", barcode: "6001057001104", size: "250ml", price: 24.99 },
+                { name: "Sour Cream 250g", brand: "Clover", barcode: "6001057001111", size: "250g", price: 19.99 }
+            ],
+
+            // MEAT & POULTRY
+            'meat': [
+                { name: "Chicken Breast 500g", brand: "Fairview", barcode: "6001057002010", size: "500g", price: 65.99 },
+                { name: "Chicken Thighs 1kg", brand: "Fairview", barcode: "6001057002027", size: "1kg", price: 89.99 },
+                { name: "Whole Chicken 1.8kg", brand: "Fairview", barcode: "6001057002034", size: "1.8kg", price: 120.99 },
+                { name: "Beef Mince 500g", brand: "Montagu", barcode: "6001057002041", size: "500g", price: 79.99 },
+                { name: "Beef Steak 400g", brand: "Montagu", barcode: "6001057002058", size: "400g", price: 95.99 },
+                { name: "Pork Chops 500g", brand: "Fairview", barcode: "6001057002065", size: "500g", price: 72.99 },
+                { name: "Boerewors 1kg", brand: "Woolworths", barcode: "6001057002072", size: "1kg", price: 110.99 },
+                { name: "Bacon 250g", brand: "Enterprise", barcode: "6001057002089", size: "250g", price: 45.99 },
+                { name: "Lamb Chops 500g", brand: "Montagu", barcode: "6001057002096", size: "500g", price: 125.99 },
+                { name: "Sausages 500g", brand: "Woolworths", barcode: "6001057002102", size: "500g", price: 55.99 }
+            ],
+
+            // FRUITS & VEGETABLES
+            'produce': [
+                { name: "Bananas 1kg", brand: "Fresh", barcode: "6001057003017", size: "1kg", price: 22.99 },
+                { name: "Apples 1kg", brand: "Granny Smith", barcode: "6001057003024", size: "1kg", price: 35.99 },
+                { name: "Oranges 1kg", brand: "Navel", barcode: "6001057003031", size: "1kg", price: 28.99 },
+                { name: "Tomatoes 500g", brand: "Fresh", barcode: "6001057003048", size: "500g", price: 18.99 },
+                { name: "Potatoes 2.5kg", brand: "Fresh", barcode: "6001057003055", size: "2.5kg", price: 45.99 },
+                { name: "Onions 1kg", brand: "Fresh", barcode: "6001057003062", size: "1kg", price: 25.99 },
+                { name: "Carrots 1kg", brand: "Fresh", barcode: "6001057003079", size: "1kg", price: 19.99 },
+                { name: "Lettuce", brand: "Iceberg", barcode: "6001057003086", size: "each", price: 15.99 },
+                { name: "Avocado", brand: "Hass", barcode: "6001057003093", size: "each", price: 12.99 },
+                { name: "Strawberries 250g", brand: "Fresh", barcode: "6001057003109", size: "250g", price: 32.99 }
+            ],
+
+            // BAKERY & BREAD
+            'bakery': [
+                { name: "White Bread 700g", brand: "Albany", barcode: "6001057004014", size: "700g", price: 18.99 },
+                { name: "Brown Bread 700g", brand: "Albany", barcode: "6001057004021", size: "700g", price: 20.99 },
+                { name: "Whole Wheat Bread", brand: "Sasko", barcode: "6001057004038", size: "700g", price: 19.99 },
+                { name: "Croissants 4 pack", brand: "Woolworths", barcode: "6001057004045", size: "4 pack", price: 32.99 },
+                { name: "Muffins 4 pack", brand: "Blue Ribbon", barcode: "6001057004052", size: "4 pack", price: 28.99 },
+                { name: "Baguette", brand: "Checkers", barcode: "6001057004069", size: "each", price: 15.99 },
+                { name: "Cinnamon Rolls 6 pack", brand: "Woolworths", barcode: "6001057004076", size: "6 pack", price: 45.99 }
+            ],
+
+            // BEVERAGES
+            'beverages': [
+                { name: "Coca-Cola 2L", brand: "Coca-Cola", barcode: "6001057005010", size: "2L", price: 24.99 },
+                { name: "Fanta Orange 2L", brand: "Coca-Cola", barcode: "6001057005027", size: "2L", price: 22.99 },
+                { name: "Sprite 2L", brand: "Coca-Cola", barcode: "6001057005034", size: "2L", price: 22.99 },
+                { name: "Orange Juice 1L", brand: "Liqui-Fruit", barcode: "6001057005041", size: "1L", price: 28.99 },
+                { name: "Apple Juice 1L", brand: "Cerese", barcode: "6001057005058", size: "1L", price: 26.99 },
+                { name: "Water 500ml", brand: "Aquelle", barcode: "6001057005065", size: "500ml", price: 12.99 },
+                { name: "Energy Drink 500ml", brand: "Red Bull", barcode: "9001057005072", size: "500ml", price: 32.99 },
+                { name: "Beer 340ml", brand: "Castle Lite", barcode: "6001057005089", size: "340ml", price: 18.99 }
+            ],
+
+            // SNACKS & SWEETS
+            'snacks': [
+                { name: "Potato Chips 150g", brand: "Lays", barcode: "6001057006017", size: "150g", price: 22.99 },
+                { name: "Chocolate Bar 100g", brand: "Cadbury", barcode: "6001057006024", size: "100g", price: 18.99 },
+                { name: "Cookies 200g", brand: "Ouma", barcode: "6001057006031", size: "200g", price: 28.99 },
+                { name: "Peanuts 200g", brand: "Willards", barcode: "6001057006048", size: "200g", price: 25.99 },
+                { name: "Energy Bar 50g", brand: "Nestle", barcode: "6001057006055", size: "50g", price: 12.99 }
+            ],
+
+            // CLEANING SUPPLIES
+            'cleaning': [
+                { name: "Dishwashing Liquid 750ml", brand: "Sunlight", barcode: "6001057007016", size: "750ml", price: 32.99 },
+                { name: "Laundry Detergent 2kg", brand: "OMO", barcode: "6001057007023", size: "2kg", price: 89.99 },
+                { name: "Toilet Cleaner 750ml", brand: "Domestos", barcode: "6001057007030", size: "750ml", price: 38.99 },
+                { name: "All Purpose Cleaner 500ml", brand: "Handy Andy", barcode: "6001057007047", size: "500ml", price: 28.99 },
+                { name: "Glass Cleaner 500ml", brand: "Windex", barcode: "6001057007054", size: "500ml", price: 35.99 }
+            ],
+
+            // PERSONAL CARE
+            'personal': [
+                { name: "Toothpaste 100ml", brand: "Colgate", barcode: "6001057008013", size: "100ml", price: 28.99 },
+                { name: "Shampoo 400ml", brand: "Head & Shoulders", barcode: "6001057008020", size: "400ml", price: 65.99 },
+                { name: "Body Soap 4 pack", brand: "Dove", barcode: "6001057008037", size: "4 pack", price: 45.99 },
+                { name: "Deodorant 150ml", brand: "Nivea", barcode: "6001057008044", size: "150ml", price: 38.99 },
+                { name: "Face Cream 50ml", brand: "Nivea", barcode: "6001057008051", size: "50ml", price: 55.99 }
+            ]
+        };
+
+        let inventory = JSON.parse(localStorage.getItem('chronoshelf-inventory')) || [];
+
+        // ===== ENHANCED DROPDOWN SYSTEM =====
+        function updateProductDropdown() {
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            const suggestions = document.getElementById('product-suggestions');
+            
+            dropdown.innerHTML = '';
+            suggestions.innerHTML = '';
+            
+            if (category && productDatabase[category]) {
+                // Sort products alphabetically
+                const sortedProducts = productDatabase[category].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Populate dropdown
+                sortedProducts.forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = `${product.name} - ${product.brand} (${product.size})`;
+                    item.onclick = () => selectProduct(product);
+                    dropdown.appendChild(item);
+                });
+                
+                // Show popular suggestions (first 4)
+                const popularProducts = sortedProducts.slice(0, 4);
+                popularProducts.forEach(product => {
+                    const btn = document.createElement('div');
+                    btn.className = 'suggestion-btn';
+                    btn.textContent = product.name.split(' ')[0]; // Just first word for brevity
+                    btn.onclick = () => selectProduct(product);
+                    suggestions.appendChild(btn);
+                });
+            }
+        }
+
+        function showProductDropdown() {
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            
+            if (category && productDatabase[category]) {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('product-name').value.toLowerCase();
+            const category = document.getElementById('product-category').value;
+            const dropdown = document.getElementById('product-dropdown');
+            
+            if (category && productDatabase[category]) {
+                const filtered = productDatabase[category].filter(product => 
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.brand.toLowerCase().includes(searchTerm)
+                );
+                
+                dropdown.innerHTML = '';
+                filtered.forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.textContent = `${product.name} - ${product.brand} (${product.size})`;
+                    item.onclick = () => selectProduct(product);
+                    dropdown.appendChild(item);
+                });
+                
+                dropdown.style.display = filtered.length > 0 ? 'block' : 'none';
+            }
+        }
+
+        function selectProduct(product) {
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('barcode').value = product.barcode;
+            document.getElementById('product-brand').value = product.brand;
+            document.getElementById('product-size').value = product.size;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('batch-number').value = `BATCH-${product.barcode.slice(-6)}`;
+            
+            // Auto-set expiry date (30 days from now)
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+            
+            document.getElementById('product-dropdown').style.display = 'none';
+            
+            // Show barcode format
+            const validation = BarcodeService.validateBarcode(product.barcode);
+            const barcodeTypeElement = document.getElementById('barcode-type');
+            barcodeTypeElement.textContent = `Format: ${validation.format}`;
+            barcodeTypeElement.style.display = 'block';
+            
+            showNotification(`✅ ${product.name} selected!`);
+        }
+
+        // ===== MANUAL CAPTURE SYSTEM =====
+        function openManualCapture() {
+            document.getElementById('manualCaptureModal').style.display = 'flex';
+        }
+
+        function closeManualCapture() {
+            document.getElementById('manualCaptureModal').style.display = 'none';
+        }
+
+        function saveManualProduct() {
+            const name = document.getElementById('manual-product-name').value;
+            const brand = document.getElementById('manual-brand').value;
+            const category = document.getElementById('manual-category').value;
+            const size = document.getElementById('manual-size').value;
+            const barcode = document.getElementById('manual-barcode').value;
+            const price = document.getElementById('manual-price').value;
+            
+            if (!name) {
+                showNotification('❌ Please enter product name', 'error');
+                return;
+            }
+            
+            // Auto-generate barcode if not provided
+            const finalBarcode = barcode || BarcodeService.generateBarcode('EAN-13');
+            
+            // Fill the main form
+            document.getElementById('product-name').value = name;
+            document.getElementById('barcode').value = finalBarcode;
+            document.getElementById('product-brand').value = brand;
+            document.getElementById('product-size').value = size;
+            document.getElementById('product-price').value = price;
+            document.getElementById('product-category').value = category;
+            document.getElementById('batch-number').value = `BATCH-${finalBarcode.slice(-6)}`;
+            
+            // Auto-set expiry date
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+            
+            closeManualCapture();
+            showNotification(`✅ Manual product "${name}" captured!`);
+            
+            // Focus on quantity field
+            document.getElementById('quantity').focus();
+        }
+
+        // ===== INVENTORY SEARCH & FILTER =====
+        function filterInventory() {
+            const searchTerm = document.getElementById('inventory-search').value.toLowerCase();
+            const inventoryList = document.getElementById('inventory-list');
+            const items = inventoryList.getElementsByClassName('inventory-item');
+            
+            for (let item of items) {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            }
+        }
+
+        // ===== LOW STOCK ALERTS =====
+        function checkLowStock() {
+            const lowStockItems = inventory.filter(item => item.quantity <= 3);
+            if (lowStockItems.length > 0) {
+                showNotification(`⚠️ ${lowStockItems.length} items running low on stock!`, 'warning');
+            }
+            return lowStockItems.length;
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.enhanced-dropdown')) {
+                document.getElementById('product-dropdown').style.display = 'none';
+            }
+        });
+
+        // Scanner Functions
+        function openScanner() {
+            document.getElementById('scannerModal').style.display = 'flex';
+            document.getElementById('manualBarcode').value = '';
+            document.getElementById('manualBarcode').focus();
+            document.getElementById('scanned-barcode-preview').style.display = 'none';
+            document.getElementById('formatIndicator').textContent = 'AUTO-DETECT';
+        }
+
+        function closeScanner() {
+            document.getElementById('scannerModal').style.display = 'none';
+        }
+
+        function processManualBarcode() {
+            const barcode = document.getElementById('manualBarcode').value.trim();
+            
+            if (!barcode) {
+                showNotification('❌ Please enter a barcode', 'error');
+                return;
+            }
+            
+            const validation = BarcodeService.validateBarcode(barcode);
+            
+            if (!validation.isValid && validation.format !== 'UNKNOWN') {
+                showNotification(`⚠️ Invalid ${validation.format} barcode`, 'warning');
+            }
+            
+            processBarcode(barcode, validation.format);
+        }
+
+        function generateRandomBarcode() {
+            const formats = ['EAN-13', 'UPC-A', 'CODE-128'];
+            const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+            const randomBarcode = BarcodeService.generateBarcode(randomFormat);
+            
+            document.getElementById('manualBarcode').value = randomBarcode;
+            
+            // Show barcode preview
+            const preview = document.getElementById('scanned-barcode-preview');
+            preview.textContent = randomBarcode;
+            preview.style.display = 'block';
+            
+            // Update format indicator
+            document.getElementById('formatIndicator').textContent = randomFormat;
+            
+            processBarcode(randomBarcode, randomFormat);
+        }
+
+        function quickScan(barcode) {
+            document.getElementById('manualBarcode').value = barcode;
+            
+            const validation = BarcodeService.validateBarcode(barcode);
+            document.getElementById('formatIndicator').textContent = validation.format;
+            
+            // Show barcode preview
+            const preview = document.getElementById('scanned-barcode-preview');
+            preview.textContent = barcode;
+            preview.style.display = 'block';
+            
+            processBarcode(barcode, validation.format);
+        }
+
+        function processBarcode(barcode, format = 'UNKNOWN') {
+            // Find product in database
+            let foundProduct = null;
+            for (const category in productDatabase) {
+                foundProduct = productDatabase[category].find(product => product.barcode === barcode);
+                if (foundProduct) break;
+            }
+            
+            if (foundProduct) {
+                document.getElementById('product-name').value = foundProduct.name;
+                document.getElementById('barcode').value = foundProduct.barcode;
+                document.getElementById('product-brand').value = foundProduct.brand;
+                document.getElementById('product-size').value = foundProduct.size;
+                document.getElementById('product-price').value = foundProduct.price;
+                document.getElementById('batch-number').value = `BATCH-${foundProduct.barcode.slice(-6)}`;
+                
+                // Find and set category
+                for (const category in productDatabase) {
+                    if (productDatabase[category].find(p => p.barcode === barcode)) {
+                        document.getElementById('product-category').value = category;
+                        break;
+                    }
+                }
+                
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 30);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                
+                closeScanner();
+                showNotification(`✅ Scanned: ${foundProduct.name} (${format})`);
+                
+            } else {
+                document.getElementById('product-name').value = 'New Product';
+                document.getElementById('barcode').value = barcode;
+                document.getElementById('batch-number').value = `BATCH-${barcode.slice(-6)}`;
+                
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 30);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                
+                closeScanner();
+                showNotification(`📦 New Product - Please enter details (${format})`);
+                document.getElementById('product-name').focus();
+                document.getElementById('product-name').select();
+            }
+            
+            // Update barcode type display
+            const barcodeTypeElement = document.getElementById('barcode-type');
+            barcodeTypeElement.textContent = `Format: ${format}`;
+            barcodeTypeElement.style.display = 'block';
+            
+            document.getElementById('quantity').focus();
+        }
+
+        // Inventory Management
+        document.getElementById('product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!checkPlanLimits()) return;
+            
+            const product = {
+                id: Date.now(),
+                name: document.getElementById('product-name').value,
+                barcode: document.getElementById('barcode').value,
+                brand: document.getElementById('product-brand').value,
+                size: document.getElementById('product-size').value,
+                category: document.getElementById('product-category').value,
+                batchNumber: document.getElementById('batch-number').value,
+                expiryDate: document.getElementById('expiry-date').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                price: parseFloat(document.getElementById('product-price').value) || 0,
+                addedDate: new Date().toISOString(),
+                barcodeFormat: BarcodeService.detectFormat(document.getElementById('barcode').value)
+            };
+            
+            inventory.push(product);
+            updateDisplay();
+            saveInventory();
+            showNotification('✅ Product added to inventory!');
+            
+            // Reset form but keep category
+            const currentCategory = document.getElementById('product-category').value;
+            this.reset();
+            document.getElementById('product-category').value = currentCategory;
+            document.getElementById('quantity').value = 1;
+            document.getElementById('expiry-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('barcode-type').style.display = 'none';
+        });
+
+        function updateDisplay() {
+            const list = document.getElementById('inventory-list');
+            const totalItems = document.getElementById('total-items');
+            const expiringSoon = document.getElementById('expiring-soon');
+            const totalValue = document.getElementById('total-value');
+            const wasteRisk = document.getElementById('waste-risk');
+            const itemCount = document.getElementById('item-count');
+            
+            const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
+            totalItems.textContent = totalQuantity;
+            
+            const today = new Date();
+            const soonCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 7;
+            }).length;
+            expiringSoon.textContent = soonCount;
+            
+            const estimatedValue = inventory.reduce((sum, item) => {
+                return sum + (item.price * item.quantity);
+            }, 0);
+            totalValue.textContent = `R${estimatedValue.toFixed(2)}`;
+            
+            const criticalCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 3;
+            }).length;
+            const wastePercentage = totalQuantity > 0 ? Math.round((criticalCount / totalQuantity) * 100) : 0;
+            wasteRisk.textContent = `${wastePercentage}%`;
+            
+            // Check low stock
+            const lowStockCount = checkLowStock();
+            
+            itemCount.textContent = `${totalQuantity} items`;
+            
+            checkExpiryAlerts();
+            updateAnalytics();
+            
+            if (inventory.length === 0) {
+                list.innerHTML = '<div class="inventory-item">No products yet. Add your first product!</div>';
+                return;
+            }
+            
+            inventory.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+            
+            list.innerHTML = inventory.map(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+                const value = item.price * item.quantity;
+                
+                let expiryClass = '';
+                if (days <= 2) expiryClass = 'expiry-critical';
+                else if (days <= 5) expiryClass = 'expiry-warning';
+                
+                // Add low stock class
+                if (item.quantity <= 3) expiryClass += ' low-stock';
+                
+                return `
+                    <div class="inventory-item ${expiryClass}">
+                        <strong>${item.name}</strong><br>
+                        <small>
+                            ${item.brand ? '🏷️ ' + item.brand + ' • ' : ''}
+                            ${item.size ? '📏 ' + item.size + ' • ' : ''}
+                            ${item.barcode ? '📊 ' + item.barcode + ' • ' : ''}
+                            🏷️ ${item.category} • 
+                            ${item.batchNumber ? '<span class="batch-number">#' + item.batchNumber + '</span> • ' : ''}
+                            📦 ${item.quantity} units • 
+                            R${value.toFixed(2)} • 
+                            <span>⏰ ${days} days</span>
+                        </small>
+                        <button onclick="removeItem(${item.id})" style="float: right; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAnalytics() {
+            const analyticsContainer = document.getElementById('analytics-container');
+            const chart = document.getElementById('analytics-chart');
+            
+            if (inventory.length === 0) {
+                analyticsContainer.style.display = 'none';
+                return;
+            }
+            
+            analyticsContainer.style.display = 'block';
+            
+            // Group by category
+            const categories = {};
+            inventory.forEach(item => {
+                if (!categories[item.category]) {
+                    categories[item.category] = 0;
+                }
+                categories[item.category] += item.quantity;
+            });
+            
+            // Create chart bars
+            const maxQuantity = Math.max(...Object.values(categories));
+            chart.innerHTML = '';
+            
+            Object.entries(categories).forEach(([category, quantity]) => {
+                const height = maxQuantity > 0 ? (quantity / maxQuantity) * 100 : 10;
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = `${height}%`;
+                
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = `${category} (${quantity})`;
+                
+                bar.appendChild(label);
+                chart.appendChild(bar);
+            });
+        }
+
+        function checkExpiryAlerts() {
+            const today = new Date();
+            let criticalCount = 0;
+
+            inventory.forEach(item => {
+                const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                if (daysUntilExpiry <= 2) {
+                    criticalCount++;
+                }
+            });
+
+            if (criticalCount > 0) {
+                showNotification(`🚨 ${criticalCount} items CRITICAL - expiring in 2 days or less!`, 'error');
+            }
+        }
+
+        function removeItem(id) {
+            inventory = inventory.filter(item => item.id !== id);
+            updateDisplay();
+            saveInventory();
+            showNotification('🗑️ Item removed from inventory');
+        }
+
+        function saveInventory() {
+            localStorage.setItem('chronoshelf-inventory', JSON.stringify(inventory));
+        }
+
+        function exportData() {
+            const data = {
+                inventory: inventory,
+                exportDate: new Date().toISOString(),
+                totalItems: inventory.reduce((sum, item) => sum + item.quantity, 0),
+                version: 'ChronoShelf-v3.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chronoshelf-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification('💾 Data exported successfully!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.inventory && Array.isArray(data.inventory)) {
+                        if (confirm(`Import ${data.inventory.length} items? This will replace current data.`)) {
+                            inventory = data.inventory;
+                            updateDisplay();
+                            saveInventory();
+                            showNotification('✅ Data imported successfully!');
+                        }
+                    } else {
+                        showNotification('❌ Invalid backup file format', 'error');
+                    }
+                } catch (error) {
+                    showNotification('❌ Error reading backup file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearData() {
+            if (confirm('Clear ALL inventory data? This cannot be undone.')) {
+                inventory = [];
+                localStorage.removeItem('chronoshelf-inventory');
+                updateDisplay();
+                showNotification('🗑️ All inventory data cleared');
+            }
+        }
+
+        function checkPlanLimits() {
+            const user = AuthService.currentUser;
+            if (user && user.plan === 'free-trial') {
+                if (inventory.length >= 50) {
+                    showNotification('🚨 Free trial limited to 50 products. Upgrade to add more.', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // UI Functions
+        function showAuthForm(formType) {
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(formType + 'Form').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            
+            AuthService.login(email, password);
+        }
+
+        function register() {
+            const businessName = document.getElementById('registerBusiness').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const plan = document.getElementById('registerPlan').value;
+            
+            if (!businessName || !email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            
+            AuthService.register(businessName, email, password, plan);
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            showNotification(`📧 Password reset link sent to ${email}`);
+        }
+
+        function logout() {
+            AuthService.logout();
+        }
+
+        function showBilling() {
+            showAuthForm('pricing');
+            AuthService.showAuthScreen();
+        }
+
+        function showNotification(msg, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = msg;
+            notification.className = 'notification';
+            
+            if (type === 'warning') {
+                notification.classList.add('warning');
+            } else if (type === 'error') {
+                notification.classList.add('error');
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            AuthService.init();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expiry-date').value = today;
+            
+            // Add keyboard shortcut for scanner
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    openScanner();
+                }
+            });
+        });
+
+        // Make functions global
+        window.removeItem = removeItem;
+        window.saveInventory = saveInventory;
+        window.clearData = clearData;
+        window.openScanner = openScanner;
+        window.closeScanner = closeScanner;
+        window.processManualBarcode = processManualBarcode;
+        window.generateRandomBarcode = generateRandomBarcode;
+        window.quickScan = quickScan;
+        window.exportData = exportData;
+        window.importData = importData;
+        window.openManualCapture = openManualCapture;
+        window.closeManualCapture = closeManualCapture;
+        window.saveManualProduct = saveManualProduct;
+        window.filterInventory = filterInventory;
+    </script>
+</body>
+</html>
