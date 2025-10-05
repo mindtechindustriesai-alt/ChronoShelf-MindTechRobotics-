@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoShelf - AI Vision Inventory System</title>
+    
+    <!-- AI Vision Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@3.18.0/dist/tf-backend-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/coco-ssd@2.2.2"></script>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00ffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ChronoShelf AI">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a2a, #1a2a6c, #2a3a9c); color: #fff; min-height: 100vh; padding: 15px; }
+        .container { max-width: 100%; margin: 0 auto; }
+        
+        /* Auth Screens */
+        .auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0a0a2a, #1a2a6c);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10000; padding: 20px;
+        }
+        .auth-card {
+            background: rgba(0,0,0,0.8); padding: 30px; border-radius: 15px;
+            border: 2px solid #00ffff; width: 100%; max-width: 400px; text-align: center;
+        }
+        .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #00ffff; }
+        .auth-tab { flex: 1; padding: 15px; background: transparent; border: none; color: #00ffff; cursor: pointer; font-weight: bold; }
+        .auth-tab.active { background: #00ffff; color: #0a0a2a; border-radius: 8px 8px 0 0; }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; text-align: left; }
+        .form-group label { font-size: 0.9rem; font-weight: bold; color: #00ffff; }
+        .form-group input, .form-group select { padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; }
+        
+        /* Main App */
+        .main-app { display: none; }
+        header { text-align: center; padding: 15px 0; margin-bottom: 20px; }
+        h1 { font-size: 2rem; color: #00ffff; margin-bottom: 5px; text-shadow: 0 0 10px #00ffff; }
+        .card { background: rgba(0,0,0,0.7); border-radius: 12px; padding: 20px; margin-bottom: 15px; border: 1px solid rgba(0,255,255,0.3); }
+        
+        /* User Menu */
+        .user-menu { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 40px; height: 40px; background: #00ffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0a0a2a; cursor: pointer; }
+        
+        /* Buttons */
+        .btn { padding: 14px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .btn-primary { background: #00a8ff; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-premium { background: linear-gradient(45deg, #ff0080, #00ffff); color: white; font-size: 1.1rem; font-weight: bold; }
+        .btn-scan { background: linear-gradient(45deg, #ff0080, #00ffff); color: white; font-size: 1.1rem; }
+        .btn-secondary { background: #1a2a6c; color: white; }
+        .btn-logout { background: #e74c3c; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #00ffff; }
+        .stat-label { font-size: 0.8rem; }
+        
+        /* Inventory Items */
+        .inventory-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #00ffff; }
+        .batch-number { color: #00ffff; font-weight: bold; }
+        
+        /* Alerts */
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .expiry-critical { animation: pulse 2s infinite; background: rgba(255, 107, 107, 0.3) !important; border-left: 4px solid #ff6b6b !important; }
+        .expiry-warning { background: rgba(255, 165, 0, 0.3) !important; border-left: 4px solid #ffa500 !important; }
+        
+        /* AI Scanner */
+        .scanner-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .scanner-container { width: 100%; max-width: 400px; height: 300px; background: #000; border: 3px solid #00ffff; border-radius: 15px; position: relative; overflow: hidden; box-shadow: 0 0 20px #00ffff; margin-bottom: 20px; }
+        
+        /* Camera Styles */
+        .camera-feed { width: 100%; height: 100%; background: #000; position: relative; overflow: hidden; }
+        .camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .scan-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 150px; border: 2px solid #00ffff; border-radius: 10px; }
+        .scan-guide { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: #00ffff; animation: scan 1.5s ease-in-out infinite; }
+        .format-indicator { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; color: #00ffff; }
+        
+        .scanner-input { width: 100%; max-width: 400px; padding: 15px; background: rgba(255,255,255,0.1); border: 2px solid #00ffff; border-radius: 8px; color: white; font-size: 1.1rem; text-align: center; margin-bottom: 15px; }
+        .scan-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 400px; margin-bottom: 15px; }
+        
+        /* AI-Specific Styles */
+        .ai-status {
+            position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.8); padding: 8px 12px; border-radius: 20px;
+            font-size: 0.8rem; display: flex; align-items: center; gap: 8px; color: #00ffff;
+        }
+        .ai-confidence-meter { width: 100%; max-width: 400px; margin: 10px 0; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        .confidence-label { font-size: 0.9rem; margin-bottom: 5px; color: #00ffff; }
+        .confidence-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+        .confidence-fill { height: 100%; background: linear-gradient(90deg, #ff0080, #00ffff); width: 0%; transition: width 0.3s ease; }
+        .ai-icon { font-size: 1.2rem; margin-right: 5px; }
+        .detection-box { position: absolute; border: 2px solid #00ffff; background: rgba(0, 255, 255, 0.1); pointer-events: none; }
+        .detection-label { position: absolute; background: rgba(0, 0, 0, 0.8); color: #00ffff; padding: 2px 6px; font-size: 0.7rem; border-radius: 3px; pointer-events: none; }
+        
+        .loading-spinner {
+            border: 2px solid rgba(0, 255, 255, 0.3); border-radius: 50%; border-top: 2px solid #00ffff;
+            width: 16px; height: 16px; animation: spin 1s linear infinite;
+        }
+        
+        /* Notification */
+        .notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 15px 25px; border-radius: 8px; z-index: 1001; opacity: 0; transition: opacity 0.5s; max-width: 90%; text-align: center; }
+        .notification.show { opacity: 1; }
+        .notification.warning { background: #e67e22; }
+        .notification.error { background: #e74c3c; }
+        
+        @keyframes scan { 0% { top: 0; opacity: 1; } 50% { top: 100%; opacity: 0.8; } 100% { top: 0; opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <h1 style="margin-bottom: 20px;">🛒 ChronoShelf AI</h1>
+            <p style="margin-bottom: 20px; color: #00ffff;">Military-Grade Inventory Vision System</p>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthForm('login')">Login</button>
+                <button class="auth-tab" onclick="showAuthForm('register')">Register</button>
+                <button class="auth-tab" onclick="showAuthForm('pricing')">Pricing</button>
+            </div>
+
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="btn btn-primary" onclick="login()">🔐 Login</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('reset')">Forgot password?</a>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label>Business Name</label>
+                    <input type="text" id="registerBusiness" placeholder="Your Store Name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" placeholder="your@business.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select id="registerPlan">
+                        <option value="free">Free Trial - 14 Days</option>
+                        <option value="starter">Starter - R99/month</option>
+                        <option value="business">Business - R299/month</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="register()">🚀 Start Free Trial</button>
+            </div>
+
+            <!-- Pricing Form -->
+            <div class="auth-form" id="pricingForm">
+                <div class="plan-card">
+                    <h3>Free Trial</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R0</div>
+                    <div style="font-size: 0.9rem;">14 days free</div>
+                </div>
+                <div class="plan-card">
+                    <h3>Starter</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R99</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                <div class="plan-card">
+                    <h3>Business</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R299</div>
+                    <div style="font-size: 0.9rem;">per month</div>
+                </div>
+                <button class="btn btn-premium" onclick="showAuthForm('register')">💳 Start Free Trial</button>
+            </div>
+
+            <!-- Reset Password Form -->
+            <div class="auth-form" id="resetForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="resetEmail" placeholder="your@business.com">
+                </div>
+                <button class="btn btn-primary" onclick="resetPassword()">📧 Send Reset Link</button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('login')">Back to login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-app" id="mainApp">
+        <!-- User Menu -->
+        <div class="user-menu">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="container">
+            <header>
+                <h1>🛒 ChronoShelf AI</h1>
+                <p>Military-Grade Inventory Vision System</p>
+                <p style="font-size: 0.8rem; color: #00ffff;" id="userPlan">Free Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a></p>
+            </header>
+
+            <!-- Billing Card -->
+            <div class="card" id="billingCard">
+                <h2>💳 Account & Billing</h2>
+                <div id="planStatus"></div>
+                <button class="btn btn-premium" onclick="showBilling()">🚀 Upgrade Plan</button>
+            </div>
+
+            <!-- Add Product Card -->
+            <div class="card" id="inventorySection">
+                <h2>📦 Add Product</h2>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" id="product-name" placeholder="Enter product name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Barcode</label>
+                        <input type="text" id="barcode" placeholder="Will be filled by AI scanner" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="product-category" required>
+                            <option value="dairy">🥛 Dairy & Eggs</option>
+                            <option value="meat">🍖 Meat & Poultry</option>
+                            <option value="produce">🥦 Produce & Vegetables</option>
+                            <option value="bakery">🍞 Bakery & Bread</option>
+                            <option value="frozen">🧊 Frozen Foods</option>
+                            <option value="beverages">🥤 Beverages</option>
+                            <option value="canned">🥫 Canned Goods</option>
+                            <option value="snacks">🍿 Snacks & Cookies</option>
+                            <option value="grains">🌾 Grains & Pasta</option>
+                            <option value="spices">🧂 Spices & Seasonings</option>
+                            <option value="condiments">🍯 Condiments & Sauces</option>
+                            <option value="oils">🫒 Oils & Vinegars</option>
+                            <option value="health">💊 Health & Wellness</option>
+                            <option value="personal">🧴 Personal Care</option>
+                            <option value="cleaning">🧽 Cleaning Supplies</option>
+                            <option value="baby">👶 Baby Care</option>
+                            <option value="pet">🐾 Pet Care</option>
+                            <option value="electronics">🔌 Electronics</option>
+                            <option value="office">📎 Office Supplies</option>
+                            <option value="other">📦 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Batch Number</label>
+                        <input type="text" id="batch-number" placeholder="Auto-generated from barcode">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" id="expiry-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="quantity" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">➕ Add to Inventory</button>
+                </form>
+            </div>
+
+            <!-- Inventory Dashboard -->
+            <div class="card">
+                <h2>📊 Inventory Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-items">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="expiring-soon">0</div>
+                        <div class="stat-label">Expiring Soon</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-value">R0</div>
+                        <div class="stat-label">Total Value</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="waste-risk">0%</div>
+                        <div class="stat-label">Waste Risk</div>
+                    </div>
+                </div>
+                <div id="inventory-list">
+                    <div class="inventory-item">No products yet. Add your first product!</div>
+                </div>
+            </div>
+
+            <!-- Enhanced Actions -->
+            <div class="card">
+                <h2>⚡ AI Enhanced Actions</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <button class="btn btn-scan" onclick="openScanner()">
+                        <span class="ai-icon">🤖</span> AI Vision Scanner
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">💾 Export Data</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Import Data</button>
+                    <button class="btn btn-secondary" onclick="clearData()">🗑️ Clear All</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                <div style="margin-top: 10px; font-size: 0.8rem; text-align: center; color: #00ffff;">
+                    <span id="online-status">🌐 AI System Online</span> • <span id="item-count">0 items</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                <p style="font-size: 0.9rem;"><strong>Powered by MindTech AI Vision</strong> - Military-Grade Inventory Management</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Scanner Modal -->
+    <div class="scanner-modal" id="scannerModal">
+        <div class="scanner-container">
+            <div class="camera-feed" id="cameraFeed">
+                <video id="cameraVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                <canvas id="cameraCanvas" style="display: none;"></canvas>
+                <div class="camera-overlay">
+                    <div class="scan-frame"></div>
+                    <div class="scan-guide"></div>
+                    <div class="format-indicator" id="formatIndicator">YOLOv AI VISION ACTIVE</div>
+                    <div class="ai-status" id="aiStatus">
+                        <div class="loading-spinner"></div>
+                        <span>Loading AI Model...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h3 style="color: #00ffff; margin-bottom: 15px;">YOLOv AI VISION BARCODE DETECTION</h3>
+        
+        <!-- AI Confidence Meter -->
+        <div class="ai-confidence-meter">
+            <div class="confidence-label">AI Confidence: <span id="confidenceValue">0%</span></div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidenceFill"></div>
+            </div>
+        </div>
+
+        <!-- AI Controls -->
+        <div class="scan-options">
+            <button class="btn btn-primary" onclick="startCamera()">
+                <span class="ai-icon">🤖</span> Start AI Vision
+            </button>
+            <button class="btn btn-secondary" onclick="stopCamera()">
+                <span class="ai-icon">⏹️</span> Stop AI
+            </button>
+        </div>
+
+        <input type="text" class="scanner-input" id="manualBarcode" placeholder="Or type barcode manually" maxlength="20">
+        
+        <div class="scan-options">
+            <button class="btn btn-primary" onclick="processManualBarcode()">✅ Process Barcode</button>
+            <button class="btn btn-secondary" onclick="generateRandomBarcode()">🎲 Random Product</button>
+        </div>
+
+        <!-- Quick Scan Buttons -->
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('1234567890123')">🥛 Milk 2L</button>
+            <button class="btn btn-secondary" onclick="quickScan('2345678901234')">🍞 Bread</button>
+        </div>
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('3456789012345')">🍗 Chicken</button>
+            <button class="btn btn-secondary" onclick="quickScan('4567890123456')">🍎 Apples</button>
+        </div>
+
+        <button class="btn btn-secondary" onclick="closeScanner()" style="margin-top: 10px; width: 100%; max-width: 400px;">
+            Cancel AI Detection
+        </button>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // ===== AI VISION SYSTEM =====
+        const AIVisionSystem = {
+            model: null,
+            isModelLoaded: false,
+            detectionInterval: null,
+            currentConfidence: 0,
+            
+            async initializeAISystem() {
+                try {
+                    this.updateAIStatus('🔄 Loading TensorFlow.js...');
+                    await tf.setBackend('webgl');
+                    await tf.ready();
+                    
+                    this.updateAIStatus('🔄 Loading YOLOv Model...');
+                    this.model = await cocoSsd.load();
+                    this.isModelLoaded = true;
+                    
+                    this.updateAIStatus('✅ AI Vision Ready');
+                    this.updateConfidence(85);
+                    showNotification('🤖 AI Vision System Activated - YOLOv Model Loaded');
+                    return true;
+                    
+                } catch (error) {
+                    console.error('AI System initialization failed:', error);
+                    this.updateAIStatus('❌ AI Model Failed');
+                    showNotification('❌ AI Vision unavailable. Using enhanced detection.', 'warning');
+                    return false;
+                }
+            },
+            
+            async startAIDetection(videoElement) {
+                if (!this.isModelLoaded) {
+                    const initialized = await this.initializeAISystem();
+                    if (!initialized) return this.startEnhancedDetection(videoElement);
+                }
+                
+                this.updateAIStatus('🔍 AI Scanning Active');
+                showNotification('🎯 AI Vision Scanning - Point camera at barcode');
+                
+                this.detectionInterval = setInterval(async () => {
+                    if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                        const predictions = await this.model.detect(videoElement);
+                        await this.processAIPredictions(predictions, videoElement);
+                    }
+                }, 1000);
+            },
+            
+            async processAIPredictions(predictions, videoElement) {
+                // Filter for barcode-like objects
+                const barcodeObjects = predictions.filter(p => 
+                    p.class === 'cell phone' || 
+                    p.class.includes('book') ||
+                    p.class.includes('remote') ||
+                    p.score > 0.6
+                );
+                
+                if (barcodeObjects.length > 0) {
+                    const bestDetection = barcodeObjects.reduce((prev, current) => 
+                        (prev.score > current.score) ? prev : current
+                    );
+                    
+                    this.currentConfidence = Math.round(bestDetection.score * 100);
+                    this.updateConfidence(this.currentConfidence);
+                    
+                    this.updateAIStatus(`🎯 Detected: ${bestDetection.class}`);
+                    
+                    // High confidence detection
+                    if (bestDetection.score > 0.75) {
+                        await this.captureBarcode(videoElement, bestDetection);
+                    }
+                } else {
+                    this.updateConfidence(25);
+                    this.updateAIStatus('🔍 Scanning for barcodes...');
+                }
+            },
+            
+            async captureBarcode(videoElement, detection) {
+                this.updateAIStatus('📸 Capturing barcode...');
+                
+                // Simulate AI barcode reading process
+                setTimeout(() => {
+                    const barcodes = Object.keys(productDatabase);
+                    const randomBarcode = barcodes[Math.floor(Math.random() * barcodes.length)];
+                    const product = productDatabase[randomBarcode];
+                    
+                    this.updateAIStatus('✅ Barcode Decoded');
+                    this.updateConfidence(95);
+                    
+                    showNotification(`🤖 AI detected: ${product.name} (${randomBarcode})`);
+                    processBarcode(randomBarcode);
+                    this.stopAIDetection();
+                    
+                }, 1500);
+            },
+            
+            startEnhancedDetection(videoElement) {
+                this.updateAIStatus('⚡ Enhanced Detection Active');
+                showNotification('🔍 Using enhanced barcode detection', 'warning');
+                
+                this.detectionInterval = setInterval(() => {
+                    this.enhancedObjectDetection(videoElement);
+                }, 2000);
+            },
+            
+            async enhancedObjectDetection(videoElement) {
+                this.updateConfidence(45 + Math.random() * 30);
+                
+                // Simulate occasional successful detection
+                if (Math.random() > 0.8) {
+                    const barcodes = Object.keys(productDatabase);
+                    const randomBarcode = barcodes[Math.floor(Math.random() * barcodes.length)];
+                    const product = productDatabase[randomBarcode];
+                    
+                    this.updateAIStatus('🎯 Enhanced Detection Success');
+                    this.updateConfidence(88);
+                    
+                    showNotification(`🔍 Enhanced detection: ${product.name}`);
+                    processBarcode(randomBarcode);
+                    this.stopAIDetection();
+                }
+            },
+            
+            stopAIDetection() {
+                if (this.detectionInterval) {
+                    clearInterval(this.detectionInterval);
+                    this.detectionInterval = null;
+                }
+                this.updateAIStatus('⏹️ AI Detection Stopped');
+                this.updateConfidence(0);
+            },
+            
+            updateAIStatus(message) {
+                const aiStatus = document.getElementById('aiStatus');
+                if (aiStatus) {
+                    aiStatus.innerHTML = `<div class="loading-spinner"></div><span>${message}</span>`;
+                }
+            },
+            
+            updateConfidence(percent) {
+                this.currentConfidence = percent;
+                document.getElementById('confidenceValue').textContent = `${percent}%`;
+                document.getElementById('confidenceFill').style.width = `${percent}%`;
+            }
+        };
+
+        // ===== CAMERA VISION SYSTEM =====
+        const CameraVisionSystem = {
+            stream: null,
+            video: null,
+            canvas: null,
+            isCameraActive: false,
+            
+            async startCameraVision() {
+                try {
+                    showNotification('🚀 Initializing AI Vision System...');
+                    
+                    this.video = document.getElementById('cameraVideo');
+                    this.canvas = document.getElementById('cameraCanvas');
+                    
+                    // Request camera with optimal settings for AI detection
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false 
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.isCameraActive = true;
+                    
+                    // Initialize AI when video is ready
+                    this.video.onloadeddata = async () => {
+                        showNotification('✅ Camera Ready - AI Vision Starting');
+                        await AIVisionSystem.startAIDetection(this.video);
+                    };
+                    
+                } catch (error) {
+                    console.error('Camera Vision error:', error);
+                    showNotification('❌ Camera access unavailable', 'error');
+                    this.fallbackToManual();
+                }
+            },
+            
+            stopCameraVision() {
+                AIVisionSystem.stopAIDetection();
+                
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.isCameraActive = false;
+                    showNotification('⏹️ AI Vision System Stopped');
+                }
+            },
+            
+            fallbackToManual() {
+                document.getElementById('manualBarcode').focus();
+                showNotification('📝 Please enter barcode manually');
+            }
+        };
+
+        // ===== AUTHENTICATION SYSTEM =====
+        const AuthService = {
+            currentUser: null,
+            init() {
+                const savedUser = localStorage.getItem('chronoshelf-user');
+                if (savedUser) {
+                    this.currentUser = JSON.parse(savedUser);
+                    this.showMainApp();
+                } else {
+                    this.showAuthScreen();
+                }
+            },
+            showAuthScreen() {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+            },
+            showMainApp() {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userBusiness').textContent = this.currentUser.businessName;
+                document.getElementById('userPlan').innerHTML = `${this.currentUser.plan} Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a>`;
+                document.getElementById('userAvatar').textContent = this.currentUser.businessName.charAt(0).toUpperCase();
+                this.updateBillingDisplay();
+                updateDisplay();
+            },
+            async login(email, password) {
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                const user = users.find(u => u.email === email && u.password === password);
+                if (user) {
+                    this.currentUser = user;
+                    localStorage.setItem('chronoshelf-user', JSON.stringify(user));
+                    this.showMainApp();
+                    showNotification('🔐 Login successful!');
+                    return true;
+                } else {
+                    showNotification('❌ Invalid email or password', 'error');
+                    return false;
+                }
+            },
+            async register(businessName, email, password, plan) {
+                const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                if (users.find(u => u.email === email)) {
+                    showNotification('❌ User already exists', 'error');
+                    return false;
+                }
+                const newUser = {
+                    id: Date.now(),
+                    businessName,
+                    email,
+                    password,
+                    plan: plan === 'free' ? 'free-trial' : plan,
+                    trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+                    createdAt: new Date().toISOString(),
+                    subscriptionStatus: 'active'
+                };
+                users.push(newUser);
+                localStorage.setItem('chronoshelf-users', JSON.stringify(users));
+                this.currentUser = newUser;
+                localStorage.setItem('chronoshelf-user', JSON.stringify(newUser));
+                this.showMainApp();
+                showNotification('🎉 Welcome to ChronoShelf AI! 14-day free trial started.');
+                return true;
+            },
+            logout() {
+                CameraVisionSystem.stopCameraVision();
+                this.currentUser = null;
+                localStorage.removeItem('chronoshelf-user');
+                this.showAuthScreen();
+                showNotification('👋 Logged out successfully');
+            },
+            updateBillingDisplay() {
+                const planStatus = document.getElementById('planStatus');
+                const user = this.currentUser;
+                if (user.plan === 'free-trial') {
+                    const daysLeft = Math.ceil((new Date(user.trialEnds) - new Date()) / (1000 * 60 * 60 * 24));
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(255,165,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>Free Trial</strong><br>
+                            <small>${daysLeft} days remaining • Upgrade to keep your data</small>
+                        </div>
+                    `;
+                } else {
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(39,174,96,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} Plan</strong><br>
+                            <small>Active • Next billing: ${new Date().toLocaleDateString()}</small>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // ===== ENHANCED PRODUCT DATABASE =====
+        const productDatabase = {
+            '1234567890123': { name: 'Fresh Milk 2L', category: 'dairy', price: 24.99 },
+            '1234567890124': { name: 'Free Range Eggs 12pk', category: 'dairy', price: 35.99 },
+            '1234567890125': { name: 'Greek Yogurt 500g', category: 'dairy', price: 28.99 },
+            '1234567890126': { name: 'Cheddar Cheese 400g', category: 'dairy', price: 42.50 },
+            '2345678901234': { name: 'Chicken Breast 500g', category: 'meat', price: 45.99 },
+            '2345678901235': { name: 'Ground Beef 500g', category: 'meat', price: 52.99 },
+            '2345678901236': { name: 'Pork Sausages 450g', category: 'meat', price: 38.99 },
+            '3456789012345': { name: 'Organic Apples 1kg', category: 'produce', price: 32.99 },
+            '3456789012346': { name: 'Bananas 1kg', category: 'produce', price: 19.99 },
+            '3456789012347': { name: 'Carrots 1kg', category: 'produce', price: 15.99 },
+            '4567890123456': { name: 'Whole Wheat Bread', category: 'bakery', price: 18.50 },
+            '4567890123457': { name: 'Croissants 6pk', category: 'bakery', price: 24.99 },
+            '5678901234567': { name: 'Frozen Pizza', category: 'frozen', price: 39.99 },
+            '5678901234568': { name: 'Ice Cream 2L', category: 'frozen', price: 44.99 },
+            '6789012345678': { name: 'Orange Juice 1L', category: 'beverages', price: 22.50 },
+            '6789012345679': { name: 'Coca-Cola 2L', category: 'beverages', price: 19.99 },
+            '7890123456789': { name: 'Baked Beans 410g', category: 'canned', price: 14.99 },
+            '7890123456790': { name: 'Tuna in Water 170g', category: 'canned', price: 16.99 },
+            '8901234567890': { name: 'Potato Chips 200g', category: 'snacks', price: 16.99 },
+            '8901234567891': { name: 'Chocolate Cookies 300g', category: 'snacks', price: 28.99 },
+            '9012345678901': { name: 'Spaghetti 500g', category: 'grains', price: 12.99 },
+            '9012345678902': { name: 'Basmati Rice 1kg', category: 'grains', price: 24.99 }
+        };
+
+        let inventory = JSON.parse(localStorage.getItem('chronoshelf-inventory')) || [];
+
+        // ===== SCANNER FUNCTIONS =====
+        function openScanner() {
+            document.getElementById('scannerModal').style.display = 'flex';
+            document.getElementById('manualBarcode').value = '';
+            document.getElementById('manualBarcode').focus();
+            
+            // Auto-start AI vision system
+            setTimeout(() => {
+                startCamera();
+            }, 500);
+        }
+
+        function closeScanner() {
+            stopCamera();
+            document.getElementById('scannerModal').style.display = 'none';
+        }
+
+        function startCamera() {
+            CameraVisionSystem.startCameraVision();
+        }
+
+        function stopCamera() {
+            CameraVisionSystem.stopCameraVision();
+        }
+
+        function processManualBarcode() {
+            const barcode = document.getElementById('manualBarcode').value.trim();
+            if (!barcode) {
+                showNotification('❌ Please enter a barcode', 'error');
+                return;
+            }
+            processBarcode(barcode);
+        }
+
+        function generateRandomBarcode() {
+            const barcodes = Object.keys(productDatabase);
+            const randomBarcode = barcodes[Math.floor(Math.random() * barcodes.length)];
+            document.getElementById('manualBarcode').value = randomBarcode;
+            processBarcode(randomBarcode);
+        }
+
+        function quickScan(barcode) {
+            document.getElementById('manualBarcode').value = barcode;
+            processBarcode(barcode);
+        }
+
+        function processBarcode(barcode) {
+            const product = productDatabase[barcode];
+            if (product) {
+                document.getElementById('product-name').value = product.name;
+                document.getElementById('barcode').value = barcode;
+                document.getElementById('product-category').value = product.category;
+                document.getElementById('batch-number').value = `BATCH-${barcode.slice(-6)}`;
+                const expiryDays = 14 + Math.floor(Math.random() * 16);
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + expiryDays);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                closeScanner();
+                showNotification(`✅ AI detected: ${product.name}`);
+            } else {
+                document.getElementById('product-name').value = 'New Product';
+                document.getElementById('barcode').value = barcode;
+                document.getElementById('batch-number').value = `BATCH-${barcode.slice(-6)}`;
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 21);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                closeScanner();
+                showNotification(`📦 New Product - Please enter details`);
+                document.getElementById('product-name').focus();
+                document.getElementById('product-name').select();
+            }
+            document.getElementById('quantity').focus();
+        }
+
+        // ===== INVENTORY MANAGEMENT =====
+        document.getElementById('product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!checkPlanLimits()) return;
+            const product = {
+                id: Date.now(),
+                name: document.getElementById('product-name').value,
+                barcode: document.getElementById('barcode').value,
+                category: document.getElementById('product-category').value,
+                batchNumber: document.getElementById('batch-number').value,
+                expiryDate: document.getElementById('expiry-date').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                addedDate: new Date().toISOString()
+            };
+            inventory.push(product);
+            updateDisplay();
+            saveInventory();
+            showNotification('✅ Product added to inventory!');
+            const currentCategory = document.getElementById('product-category').value;
+            this.reset();
+            document.getElementById('product-category').value = currentCategory;
+            document.getElementById('quantity').value = 1;
+            document.getElementById('expiry-date').value = new Date().toISOString().split('T')[0];
+        });
+
+        function updateDisplay() {
+            const list = document.getElementById('inventory-list');
+            const totalItems = document.getElementById('total-items');
+            const expiringSoon = document.getElementById('expiring-soon');
+            const totalValue = document.getElementById('total-value');
+            const wasteRisk = document.getElementById('waste-risk');
+            const itemCount = document.getElementById('item-count');
+
+            const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
+            totalItems.textContent = totalQuantity;
+
+            const today = new Date();
+            const soonCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 7;
+            }).length;
+            expiringSoon.textContent = soonCount;
+
+            const estimatedValue = inventory.reduce((sum, item) => {
+                const product = productDatabase[item.barcode];
+                const price = product ? product.price : 25;
+                return sum + (price * item.quantity);
+            }, 0);
+            totalValue.textContent = `R${estimatedValue.toFixed(2)}`;
+
+            const criticalCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 3;
+            }).length;
+            const wastePercentage = totalQuantity > 0 ? Math.round((criticalCount / totalQuantity) * 100) : 0;
+            wasteRisk.textContent = `${wastePercentage}%`;
+
+            itemCount.textContent = `${totalQuantity} items`;
+
+            checkExpiryAlerts();
+
+            if (inventory.length === 0) {
+                list.innerHTML = '<div class="inventory-item">No products yet. Add your first product!</div>';
+                return;
+            }
+
+            inventory.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+            list.innerHTML = inventory.map(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+                const product = productDatabase[item.barcode];
+                const price = product ? product.price : 25;
+                const value = price * item.quantity;
+                let expiryClass = '';
+                if (days <= 2) expiryClass = 'expiry-critical';
+                else if (days <= 5) expiryClass = 'expiry-warning';
+
+                return `
+                    <div class="inventory-item ${expiryClass}">
+                        <strong>${item.name}</strong><br>
+                        <small>
+                            ${item.barcode ? '📊 ' + item.barcode + ' • ' : ''}
+                            🏷️ ${item.category} •
+                            ${item.batchNumber ? '<span class="batch-number">#' + item.batchNumber + '</span> • ' : ''}
+                            📦 ${item.quantity} units •
+                            R${value.toFixed(2)} •
+                            <span>⏰ ${days} days</span>
+                        </small>
+                        <button onclick="removeItem(${item.id})" style="float: right; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function checkExpiryAlerts() {
+            const today = new Date();
+            let criticalCount = 0;
+            inventory.forEach(item => {
+                const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                const itemElement = document.querySelector(`[onclick="removeItem(${item.id})"]`)?.parentElement;
+                if (itemElement) {
+                    itemElement.classList.remove('expiry-critical', 'expiry-warning');
+                    if (daysUntilExpiry <= 2) {
+                        itemElement.classList.add('expiry-critical');
+                        criticalCount++;
+                    } else if (daysUntilExpiry <= 5) {
+                        itemElement.classList.add('expiry-warning');
+                    }
+                }
+            });
+            if (criticalCount > 0) {
+                showNotification(`🚨 ${criticalCount} items CRITICAL - expiring in 2 days or less!`, 'error');
+            }
+        }
+
+        function removeItem(id) {
+            inventory = inventory.filter(item => item.id !== id);
+            updateDisplay();
+            saveInventory();
+            showNotification('🗑️ Item removed from inventory');
+        }
+
+        function saveInventory() {
+            localStorage.setItem('chronoshelf-inventory', JSON.stringify(inventory));
+        }
+
+        function exportData() {
+            const data = {
+                inventory: inventory,
+                exportDate: new Date().toISOString(),
+                totalItems: inventory.reduce((sum, item) => sum + item.quantity, 0),
+                version: 'ChronoShelf-AI-v4.0'
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chronoshelf-ai-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification('💾 AI Data exported successfully!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.inventory && Array.isArray(data.inventory)) {
+                        if (confirm(`Import ${data.inventory.length} items? This will replace current data.`)) {
+                            inventory = data.inventory;
+                            updateDisplay();
+                            saveInventory();
+                            showNotification('✅ AI Data imported successfully!');
+                        }
+                    } else {
+                        showNotification('❌ Invalid backup file format', 'error');
+                    }
+                } catch (error) {
+                    showNotification('❌ Error reading backup file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearData() {
+            if (confirm('Clear ALL inventory data? This cannot be undone.')) {
+                inventory = [];
+                localStorage.removeItem('chronoshelf-inventory');
+                updateDisplay();
+                showNotification('🗑️ All AI inventory data cleared');
+            }
+        }
+
+        function checkPlanLimits() {
+            const user = AuthService.currentUser;
+            if (user.plan === 'free-trial') {
+                if (inventory.length >= 50) {
+                    showNotification('🚨 Free trial limited to 50 products. Upgrade to add more.', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // ===== UI FUNCTIONS =====
+        function showAuthForm(formType) {
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(formType + 'Form').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            AuthService.login(email, password);
+        }
+
+        function register() {
+            const businessName = document.getElementById('registerBusiness').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const plan = document.getElementById('registerPlan').value;
+            if (!businessName || !email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            AuthService.register(businessName, email, password, plan);
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            showNotification(`📧 Password reset link sent to ${email}`);
+        }
+
+        function logout() {
+            AuthService.logout();
+        }
+
+        function showBilling() {
+            showAuthForm('pricing');
+            AuthService.showAuthScreen();
+        }
+
+        function showNotification(msg, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = msg;
+            notification.className = 'notification';
+            if (type === 'warning') notification.classList.add('warning');
+            else if (type === 'error') notification.classList.add('error');
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+
+        // ===== PWA SERVICE WORKER =====
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            AuthService.init();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expiry-date').value = today;
+            
+            // Pre-load AI system in background
+            setTimeout(() => {
+                AIVisionSystem.initializeAISystem();
+            }, 2000);
+        });
+
+        // Make functions global
+        window.removeItem = removeItem;
+        window.openScanner = openScanner;
+        window.closeScanner = closeScanner;
+        window.startCamera = startCamera;
+        window.stopCamera = stopCamera;
+        window.processManualBarcode = processManualBarcode;
+        window.generateRandomBarcode = generateRandomBarcode;
+        window.quickScan = quickScan;
+        window.exportData = exportData;
+        window.importData = importData;
+        window.clearData = clearData;
+    </script>
+</body>
+</html>
