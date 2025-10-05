@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoShelf AI - Intelligent Stock Management</title>
+    
+    <!-- Google Fonts for Futuristic Design -->
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@800;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#00ffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ChronoShelf">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        /* === ENHANCED CSS WITH FUTURISTIC DESIGN === */
+        :root {
+            --primary-cyan: #00ffff;
+            --primary-dark: #0a0a2a;
+            --primary-blue: #1a2a6c;
+            --accent-pink: #ff0080;
+            --success-green: #27ae60;
+            --warning-orange: #e67e22;
+            --error-red: #e74c3c;
+            --text-light: #ffffff;
+            --card-bg: rgba(0,0,0,0.7);
+            --input-bg: rgba(255,255,255,0.1);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-blue), #2a3a9c);
+            color: var(--text-light);
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        /* === STARTUP SCREEN === */
+        .startup-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a2a, #1a2a6c, #2a3a9c);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            animation: startupFadeOut 3s ease-in-out 2s forwards;
+        }
+
+        .startup-logo {
+            text-align: center;
+            animation: neonGlow 2s ease-in-out infinite alternate;
+        }
+
+        .startup-title {
+            font-family: 'Exo 2', sans-serif;
+            font-weight: 900;
+            font-size: 4rem;
+            background: linear-gradient(45deg, #00ffff, #ff0080, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .startup-subtitle {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            letter-spacing: 3px;
+            opacity: 0.8;
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 30px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #ff0080);
+            border-radius: 2px;
+            animation: loadingFill 2s ease-in-out forwards;
+        }
+
+        @keyframes neonGlow {
+            from {
+                text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff;
+            }
+            to {
+                text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 90px #00ffff;
+            }
+        }
+
+        @keyframes loadingFill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes startupFadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+
+        .container { 
+            max-width: 100%; 
+            margin: 0 auto; 
+        }
+
+        /* === AUTHENTICATION SCREENS === */
+        .auth-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-blue));
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid var(--primary-cyan);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--primary-cyan);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            color: var(--primary-cyan);
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .auth-tab.active {
+            background: var(--primary-cyan);
+            color: var(--primary-dark);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--primary-cyan);
+        }
+
+        .form-group input, .form-group select {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-light);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        /* FIXED DROPDOWN STYLES */
+        .form-group select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%2300ffff' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+            padding-right: 40px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: 2px solid var(--primary-cyan);
+            background: rgba(255,255,255,0.15);
+        }
+
+        /* === MAIN APPLICATION === */
+        .main-app { display: none; }
+
+        header { 
+            text-align: center; 
+            padding: 15px 0; 
+            margin-bottom: 20px; 
+        }
+
+        h1 { 
+            font-size: 2rem; 
+            color: var(--primary-cyan); 
+            margin-bottom: 5px; 
+            text-shadow: 0 0 10px var(--primary-cyan);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0,255,255,0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        /* === USER MENU === */
+        .user-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--primary-dark);
+            cursor: pointer;
+        }
+
+        /* === BUTTONS === */
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary { background: #00a8ff; color: white; }
+        .btn-success { background: var(--success-green); color: white; }
+        .btn-warning { background: var(--warning-orange); color: white; }
+        .btn-error { background: var(--error-red); color: white; }
+        
+        .btn-premium {
+            background: linear-gradient(45deg, var(--accent-pink), var(--primary-cyan));
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .btn-scan {
+            background: linear-gradient(45deg, var(--accent-pink), var(--primary-cyan));
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .btn-secondary { background: var(--primary-blue); color: white; }
+        
+        .btn-logout {
+            background: var(--error-red);
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: auto;
+        }
+
+        /* === SCANNER ENHANCEMENTS === */
+        .scanner-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .scanner-container {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background: #000;
+            border: 3px solid var(--primary-cyan);
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px var(--primary-cyan);
+            margin-bottom: 20px;
+        }
+
+        .camera-feed {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-cyan);
+            font-size: 1.2rem;
+            flex-direction: column;
+            background: linear-gradient(45deg, #0a0a2a, #1a2a6c);
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        .scan-frame {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; height: 150px;
+            border: 2px solid var(--primary-cyan);
+            border-radius: 10px;
+        }
+
+        .scan-guide {
+            position: absolute;
+            top: 50%; left: 10%;
+            width: 80%; height: 2px;
+            background: var(--primary-cyan);
+            animation: scan 1.5s ease-in-out infinite;
+        }
+
+        .scanner-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            background: var(--input-bg);
+            border: 2px solid var(--primary-cyan);
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .scan-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 15px;
+        }
+
+        /* === INVENTORY ITEMS === */
+        .inventory-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary-cyan);
+            transition: all 0.3s ease;
+        }
+
+        .inventory-item:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(5px);
+        }
+
+        .batch-number { 
+            color: var(--primary-cyan); 
+            font-weight: bold; 
+        }
+
+        /* === STATS GRID === */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* === ALERT STYLES === */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .expiry-critical {
+            animation: pulse 2s infinite;
+            background: rgba(255, 107, 107, 0.3) !important;
+            border-left: 4px solid var(--error-red) !important;
+        }
+
+        .expiry-warning {
+            background: rgba(255, 165, 0, 0.3) !important;
+            border-left: 4px solid var(--warning-orange) !important;
+        }
+
+        /* === NOTIFICATION SYSTEM === */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success-green);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.5s ease;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .notification.show { opacity: 1; }
+        .notification.warning { background: var(--warning-orange); }
+        .notification.error { background: var(--error-red); }
+
+        /* === ANIMATIONS === */
+        @keyframes scan {
+            0% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.8; }
+            100% { top: 0; opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* === LOADING STATES === */
+        .loading {
+            display: inline-block;
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-cyan);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* === RESPONSIVE DESIGN === */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .card { padding: 15px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .scan-options { grid-template-columns: 1fr; }
+            
+            h1 { font-size: 1.5rem; }
+            .btn { padding: 12px 16px; }
+            
+            .startup-title {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-card { padding: 20px; }
+            .user-menu { top: 10px; right: 10px; }
+            .scanner-container { height: 250px; }
+            
+            .startup-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* === ACCESSIBILITY === */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; }
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
+
+        /* === ENHANCED FOOTER === */
+        .app-footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* === GRID LAYOUT FOR BUTTONS === */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .barcode-type {
+            background: rgba(0,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: inline-block;
+            color: var(--primary-cyan);
+        }
+
+        .barcode-preview {
+            font-family: monospace;
+            background: white;
+            color: black;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .yolov-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            color: var(--primary-cyan);
+            border: 1px solid var(--primary-cyan);
+        }
+
+        .processing-time {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255,0,128,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            color: var(--accent-pink);
+            border: 1px solid var(--accent-pink);
+        }
+    </style>
+</head>
+<body>
+    <!-- Startup Screen -->
+    <div class="startup-screen" id="startupScreen">
+        <div class="startup-logo">
+            <div class="startup-title">ChronoShelf</div>
+            <div class="startup-subtitle">POWERED BY MIND TECH</div>
+        </div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <h1>🛒 ChronoShelf AI</h1>
+            <p style="margin-bottom: 20px; color: #00ffff;">AI Powered Stock Management System</p>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthForm('login')">Login</button>
+                <button class="auth-tab" onclick="showAuthForm('register')">Register</button>
+                <button class="auth-tab" onclick="showAuthForm('pricing')">Pricing</button>
+            </div>
+
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@business.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button class="btn btn-primary" onclick="login()" id="loginButton">
+                    <span class="btn-icon">🔐</span> Login
+                </button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('reset')">Forgot password?</a>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerBusiness">Business Name</label>
+                    <input type="text" id="registerBusiness" placeholder="Your Store Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" placeholder="your@business.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="registerPlan">Plan</label>
+                    <select id="registerPlan">
+                        <option value="free">Free Trial - 14 Days</option>
+                        <option value="starter">Starter - R99/month</option>
+                        <option value="business">Business - R299/month</option>
+                        <option value="enterprise">Enterprise - R599/month</option>
+                        <option value="custom">Custom Plan - Contact Sales</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="register()" id="registerButton">
+                    <span class="btn-icon">🚀</span> Start Free Trial
+                </button>
+            </div>
+
+            <!-- Pricing Form -->
+            <div class="auth-form" id="pricingForm">
+                <div class="plan-card">
+                    <h3>Free Trial</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R0</div>
+                    <div style="font-size: 0.9rem;">14 days free • Up to 50 products</div>
+                </div>
+                <div class="plan-card">
+                    <h3>Starter</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R99</div>
+                    <div style="font-size: 0.9rem;">per month • Unlimited products</div>
+                </div>
+                <div class="plan-card">
+                    <h3>Business</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R299</div>
+                    <div style="font-size: 0.9rem;">per month • Advanced features</div>
+                </div>
+                <div class="plan-card">
+                    <h3>Enterprise</h3>
+                    <div style="font-size: 2rem; font-weight: bold;">R599</div>
+                    <div style="font-size: 0.9rem;">per month • Premium support</div>
+                </div>
+                <button class="btn btn-premium" onclick="showAuthForm('register')">
+                    <span class="btn-icon">💳</span> Start Free Trial
+                </button>
+            </div>
+
+            <!-- Reset Password Form -->
+            <div class="auth-form" id="resetForm">
+                <div class="form-group">
+                    <label for="resetEmail">Email</label>
+                    <input type="email" id="resetEmail" placeholder="your@business.com" required>
+                </div>
+                <button class="btn btn-primary" onclick="resetPassword()">
+                    <span class="btn-icon">📧</span> Send Reset Link
+                </button>
+                <p style="margin-top: 15px; font-size: 0.9rem;">
+                    <a href="#" style="color: #00ffff;" onclick="showAuthForm('login')">Back to login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="main-app" id="mainApp">
+        <div class="user-menu">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="container">
+            <header>
+                <h1>🛒 ChronoShelf AI</h1>
+                <p>AI Powered Stock Management System</p>
+                <p style="font-size: 0.8rem; color: #00ffff;" id="userPlan">
+                    Free Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a>
+                </p>
+            </header>
+
+            <!-- Billing Card -->
+            <div class="card" id="billingCard">
+                <h2>💳 Account & Billing</h2>
+                <div id="planStatus"><!-- Dynamic content --></div>
+                <button class="btn btn-premium" onclick="showBilling()">
+                    <span class="btn-icon">🚀</span> Upgrade Plan
+                </button>
+            </div>
+
+            <!-- Add Product Card -->
+            <div class="card">
+                <h2>📦 Add Product</h2>
+                <form id="product-form">
+                    <div class="form-group">
+                        <label for="product-name">Product Name</label>
+                        <input type="text" id="product-name" placeholder="Enter product name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="barcode">Barcode</label>
+                        <input type="text" id="barcode" placeholder="Will be filled by scanner" readonly>
+                        <div id="barcode-type" class="barcode-type" style="display: none;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="product-category">Category</label>
+                        <select id="product-category" required>
+                            <option value="dairy">Dairy Products</option>
+                            <option value="meat">Meat & Poultry</option>
+                            <option value="produce">Fresh Produce</option>
+                            <option value="bakery">Bakery Items</option>
+                            <option value="frozen">Frozen Foods</option>
+                            <option value="beverages">Beverages</option>
+                            <option value="canned">Canned Goods</option>
+                            <option value="snacks">Snacks & Confectionery</option>
+                            <option value="personal">Personal Care</option>
+                            <option value="household">Household Items</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="clothing">Clothing & Apparel</option>
+                            <option value="pharmacy">Pharmacy</option>
+                            <option value="automotive">Automotive</option>
+                            <option value="hardware">Hardware & Tools</option>
+                            <option value="sports">Sports & Outdoors</option>
+                            <option value="toys">Toys & Games</option>
+                            <option value="books">Books & Media</option>
+                            <option value="office">Office Supplies</option>
+                            <option value="jewelry">Jewelry & Accessories</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-number">Batch Number</label>
+                        <input type="text" id="batch-number" placeholder="Auto-generated from barcode">
+                    </div>
+                    <div class="form-group">
+                        <label for="expiry-date">Expiry Date</label>
+                        <input type="date" id="expiry-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" id="quantity" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-icon">➕</span> Add to Inventory
+                    </button>
+                </form>
+            </div>
+
+            <!-- Inventory Dashboard -->
+            <div class="card">
+                <h2>📊 Inventory Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-items">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="expiring-soon">0</div>
+                        <div class="stat-label">Expiring Soon</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-value">R0</div>
+                        <div class="stat-label">Total Value</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="waste-risk">0%</div>
+                        <div class="stat-label">Waste Risk</div>
+                    </div>
+                </div>
+
+                <!-- Analytics Chart -->
+                <div id="analytics-container" style="display: none;">
+                    <h3 style="margin-top: 15px; margin-bottom: 10px; color: #00ffff;">📈 Inventory Analytics</h3>
+                    <div class="analytics-chart" id="analytics-chart"></div>
+                </div>
+
+                <div id="inventory-list" style="margin-top: 15px;">
+                    <div class="inventory-item">No products yet. Add your first product!</div>
+                </div>
+            </div>
+
+            <!-- Enhanced Actions -->
+            <div class="card">
+                <h2>⚡ Enhanced Actions</h2>
+                <div class="actions-grid">
+                    <button class="btn btn-scan" onclick="openScanner()">
+                        <span class="btn-icon">🔦</span> AI Scanner
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        <span class="btn-icon">💾</span> Export Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">
+                        <span class="btn-icon">📤</span> Import Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearData()">
+                        <span class="btn-icon">🗑️</span> Clear All
+                    </button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                
+                <div style="margin-top: 10px; font-size: 0.8rem; text-align: center; color: #00ffff;">
+                    <span id="online-status">🌐 Online</span> • 
+                    <span id="item-count">0 items</span> •
+                    <span id="sync-status">Synced</span>
+                </div>
+            </div>
+
+            <!-- Enhanced Footer -->
+            <div class="app-footer">
+                <strong>Powered by MindTech</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div class="scanner-modal" id="scannerModal">
+        <div class="scanner-container">
+            <div class="camera-feed">
+                <div class="scanner-overlay">
+                    <div class="scan-frame"></div>
+                    <div class="scan-guide"></div>
+                    <div class="format-indicator" id="formatIndicator">AUTO-DETECT</div>
+                    <div class="yolov-indicator">YOLOv AI ACTIVE</div>
+                    <div class="processing-time" id="processingTime">Processing: 0.8s</div>
+                </div>
+                <div>🔍 AI Barcode Scanner</div>
+                <div style="font-size: 0.8rem; margin-top: 5px;">YOLOv AI Processing Active</div>
+                <div style="font-size: 0.7rem; margin-top: 10px; color: #ff0080;">No Camera Required - AI Simulation</div>
+            </div>
+        </div>
+
+        <h3 style="color: #00ffff; margin-bottom: 15px;">SCAN BARCODE OR ENTER MANUALLY</h3>
+        
+        <input type="text" class="scanner-input" id="manualBarcode" placeholder="Type barcode number here" maxlength="20">
+        
+        <div id="scanned-barcode-preview" class="barcode-preview" style="display: none;"></div>
+
+        <div class="scan-options">
+            <button class="btn btn-primary" onclick="processManualBarcode()">
+                <span class="btn-icon">✅</span> Process Barcode
+            </button>
+            <button class="btn btn-secondary" onclick="generateRandomBarcode()">
+                <span class="btn-icon">🎲</span> Random Product
+            </button>
+        </div>
+
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('1234567890123')">
+                <span class="btn-icon">🥛</span> Milk (EAN-13)
+            </button>
+            <button class="btn btn-secondary" onclick="quickScan('614141007349')">
+                <span class="btn-icon">🍞</span> Bread (UPC-A)
+            </button>
+        </div>
+
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('345678901234')">
+                <span class="btn-icon">🍗</span> Chicken (CODE-128)
+            </button>
+            <button class="btn btn-secondary" onclick="quickScan('4567890123456')">
+                <span class="btn-icon">🍎</span> Apples (EAN-13)
+            </button>
+        </div>
+
+        <div class="scan-options">
+            <button class="btn btn-secondary" onclick="quickScan('7890123456789')">
+                <span class="btn-icon">🥛</span> Yogurt (EAN-13)
+            </button>
+            <button class="btn btn-secondary" onclick="quickScan('8901234567890')">
+                <span class="btn-icon">🥩</span> Beef (EAN-13)
+            </button>
+        </div>
+
+        <button class="btn btn-secondary" onclick="closeScanner()" style="margin-top: 10px; width: 100%; max-width: 400px;">
+            Cancel
+        </button>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // === ENHANCED JAVASCRIPT WITH YOLOV INTEGRATION ===
+        
+        // Initialize Startup Screen
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show startup screen for 3 seconds, then check authentication
+            setTimeout(() => {
+                const startupScreen = document.getElementById('startupScreen');
+                startupScreen.style.display = 'none';
+                
+                // Check if user is already logged in
+                const savedUser = localStorage.getItem('chronoshelf-user');
+                if (savedUser) {
+                    try {
+                        AuthService.currentUser = JSON.parse(savedUser);
+                        AuthService.showMainApp();
+                    } catch (error) {
+                        console.error('Error parsing saved user:', error);
+                        showAuthScreen();
+                    }
+                } else {
+                    showAuthScreen();
+                }
+            }, 3000);
+
+            // Enable login button when form is valid
+            document.getElementById('loginEmail').addEventListener('input', validateLoginForm);
+            document.getElementById('loginPassword').addEventListener('input', validateLoginForm);
+        });
+
+        function showAuthScreen() {
+            document.getElementById('authScreen').style.display = 'flex';
+        }
+
+        function validateLoginForm() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const loginButton = document.getElementById('loginButton');
+            
+            if (email && password) {
+                loginButton.disabled = false;
+            } else {
+                loginButton.disabled = true;
+            }
+        }
+
+        // Enhanced Authentication System
+        const AuthService = {
+            currentUser: null,
+            
+            showMainApp() {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                
+                if (this.currentUser) {
+                    document.getElementById('userBusiness').textContent = this.currentUser.businessName;
+                    document.getElementById('userPlan').innerHTML = 
+                        `${this.currentUser.plan} Plan • <a href="#" style="color: #ff0080;" onclick="showBilling()">Upgrade</a>`;
+                    document.getElementById('userAvatar').textContent = 
+                        this.currentUser.businessName.charAt(0).toUpperCase();
+                    
+                    this.updateBillingDisplay();
+                    updateDisplay();
+                }
+            },
+
+            async login(email, password) {
+                if (!this.validateEmail(email)) {
+                    showNotification('❌ Please enter a valid email address', 'error');
+                    return false;
+                }
+
+                showLoading('login');
+                
+                try {
+                    const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                    const user = users.find(u => u.email === email && u.password === password);
+                    
+                    if (user) {
+                        this.currentUser = user;
+                        localStorage.setItem('chronoshelf-user', JSON.stringify(user));
+                        this.showMainApp();
+                        showNotification('🔐 Login successful!', 'success');
+                        return true;
+                    } else {
+                        showNotification('❌ Invalid email or password', 'error');
+                        return false;
+                    }
+                } catch (error) {
+                    showNotification('❌ Login failed. Please try again.', 'error');
+                    return false;
+                } finally {
+                    hideLoading('login');
+                }
+            },
+
+            validateEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            },
+
+            async register(businessName, email, password, plan) {
+                if (!businessName || !email || !password) {
+                    showNotification('❌ Please fill in all fields', 'error');
+                    return false;
+                }
+
+                if (!this.validateEmail(email)) {
+                    showNotification('❌ Please enter a valid email address', 'error');
+                    return false;
+                }
+
+                if (password.length < 6) {
+                    showNotification('❌ Password must be at least 6 characters', 'error');
+                    return false;
+                }
+
+                showLoading('register');
+
+                try {
+                    const users = JSON.parse(localStorage.getItem('chronoshelf-users') || '[]');
+                    
+                    if (users.find(u => u.email === email)) {
+                        showNotification('❌ User already exists with this email', 'error');
+                        return false;
+                    }
+
+                    const newUser = {
+                        id: Date.now(),
+                        businessName: businessName.trim(),
+                        email: email.toLowerCase().trim(),
+                        password: password,
+                        plan: plan === 'free' ? 'free-trial' : plan,
+                        trialEnds: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+                        createdAt: new Date().toISOString(),
+                        subscriptionStatus: 'active'
+                    };
+
+                    users.push(newUser);
+                    localStorage.setItem('chronoshelf-users', JSON.stringify(users));
+                    
+                    this.currentUser = newUser;
+                    localStorage.setItem('chronoshelf-user', JSON.stringify(newUser));
+                    
+                    this.showMainApp();
+                    showNotification('🎉 Welcome to ChronoShelf! 14-day free trial started.', 'success');
+                    return true;
+                } catch (error) {
+                    showNotification('❌ Registration failed. Please try again.', 'error');
+                    return false;
+                } finally {
+                    hideLoading('register');
+                }
+            },
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('chronoshelf-user');
+                showAuthScreen();
+                showNotification('👋 Logged out successfully', 'success');
+            },
+
+            updateBillingDisplay() {
+                const planStatus = document.getElementById('planStatus');
+                const user = this.currentUser;
+
+                if (!user) return;
+
+                if (user.plan === 'free-trial') {
+                    const daysLeft = Math.ceil((new Date(user.trialEnds) - new Date()) / (1000 * 60 * 60 * 24));
+                    const daysText = daysLeft === 1 ? '1 day' : `${daysLeft} days`;
+                    
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(255,165,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>Free Trial</strong><br>
+                            <small>${daysText} remaining • Upgrade to keep your data</small>
+                        </div>
+                    `;
+                } else {
+                    planStatus.innerHTML = `
+                        <div style="background: rgba(39,174,96,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <strong>${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} Plan</strong><br>
+                            <small>Active • Next billing: ${new Date().toLocaleDateString()}</small>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // Enhanced Barcode Service with YOLOv Simulation
+        const BarcodeService = {
+            formats: {
+                'EAN-13': /^\d{13}$/,
+                'UPC-A': /^\d{12}$/,
+                'CODE-128': /^[A-Za-z0-9\-\.\$\+\%\/\s]{1,20}$/,
+                'CODE-39': /^[A-Z0-9\-\s\.\+\$\/\%]{1,20}$/,
+                'ITF': /^\d{14}$/
+            },
+
+            detectFormat(barcode) {
+                for (const [format, regex] of Object.entries(this.formats)) {
+                    if (regex.test(barcode)) {
+                        return format;
+                    }
+                }
+                return 'UNKNOWN';
+            },
+
+            validateBarcode(barcode) {
+                const format = this.detectFormat(barcode);
+                let isValid = false;
+
+                switch(format) {
+                    case 'EAN-13':
+                        isValid = this.validateEAN13(barcode);
+                        break;
+                    case 'UPC-A':
+                        isValid = this.validateUPCA(barcode);
+                        break;
+                    default:
+                        isValid = barcode.length > 0;
+                }
+
+                return { format, isValid };
+            },
+
+            validateEAN13(barcode) {
+                if (barcode.length !== 13) return false;
+                
+                let sum = 0;
+                for (let i = 0; i < 12; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit : digit * 3;
+                }
+                
+                const checksum = (10 - (sum % 10)) % 10;
+                return checksum === parseInt(barcode[12]);
+            },
+
+            validateUPCA(barcode) {
+                if (barcode.length !== 12) return false;
+                
+                let sum = 0;
+                for (let i = 0; i < 11; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit * 3 : digit;
+                }
+                
+                const checksum = (10 - (sum % 10)) % 10;
+                return checksum === parseInt(barcode[11]);
+            },
+
+            generateBarcode(format) {
+                switch(format) {
+                    case 'EAN-13':
+                        return this.generateEAN13();
+                    case 'UPC-A':
+                        return this.generateUPCA();
+                    case 'CODE-128':
+                        return this.generateCode128();
+                    default:
+                        return this.generateRandomDigits(13);
+                }
+            },
+
+            generateEAN13() {
+                let barcode = '2' + this.generateRandomDigits(11);
+                let sum = 0;
+                
+                for (let i = 0; i < 12; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit : digit * 3;
+                }
+                
+                const checksum = (10 - (sum % 10)) % 10;
+                return barcode + checksum;
+            },
+
+            generateUPCA() {
+                let barcode = this.generateRandomDigits(11);
+                let sum = 0;
+                
+                for (let i = 0; i < 11; i++) {
+                    const digit = parseInt(barcode[i]);
+                    sum += (i % 2 === 0) ? digit * 3 : digit;
+                }
+                
+                const checksum = (10 - (sum % 10)) % 10;
+                return barcode + checksum;
+            },
+
+            generateCode128() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let result = '';
+                
+                for (let i = 0; i < 10; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                
+                return result;
+            },
+
+            generateRandomDigits(length) {
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += Math.floor(Math.random() * 10);
+                }
+                return result;
+            },
+
+            // YOLOv Simulation
+            simulateYOLOvProcessing(barcode) {
+                const startTime = Date.now();
+                
+                // Simulate AI processing delay
+                const processingTime = Math.random() * 200 + 600; // 600-800ms
+                
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        const endTime = Date.now();
+                        const processingDuration = (endTime - startTime) / 1000;
+                        
+                        // Update processing time display
+                        document.getElementById('processingTime').textContent = 
+                            `Processing: ${processingDuration.toFixed(1)}s`;
+                            
+                        resolve({
+                            barcode: barcode,
+                            confidence: Math.random() * 0.2 + 0.8, // 80-100% confidence
+                            processingTime: processingDuration
+                        });
+                    }, processingTime);
+                });
+            }
+        };
+
+        // Enhanced Product Database
+        const productDatabase = {
+            '1234567890123': { name: 'Fresh Milk 2L', category: 'dairy', price: 24.99 },
+            '614141007349': { name: 'Whole Wheat Bread', category: 'bakery', price: 18.50 },
+            '345678901234': { name: 'Chicken Breast 500g', category: 'meat', price: 45.99 },
+            '4567890123456': { name: 'Organic Apples 1kg', category: 'produce', price: 32.99 },
+            '5678901234567': { name: 'Frozen Pizza', category: 'frozen', price: 39.99 },
+            '6789012345678': { name: 'Orange Juice 1L', category: 'beverages', price: 22.50 },
+            '7890123456789': { name: 'Greek Yogurt 500g', category: 'dairy', price: 28.99 },
+            '8901234567890': { name: 'Ground Beef 500g', category: 'meat', price: 52.99 },
+            '9012345678901': { name: 'Bananas 1kg', category: 'produce', price: 19.99 },
+            '0123456789012': { name: 'Ice Cream 2L', category: 'frozen', price: 44.99 },
+            '1231231231231': { name: 'Cheddar Cheese 400g', category: 'dairy', price: 35.99 },
+            '2342342342342': { name: 'Pork Sausages 450g', category: 'meat', price: 42.50 },
+            '3453453453453': { name: 'Carrots 1kg', category: 'produce', price: 15.99 },
+            '4564564564564': { name: 'Coca-Cola 2L', category: 'beverages', price: 19.99 },
+            '5675675675675': { name: 'Potato Chips 200g', category: 'snacks', price: 16.99 }
+        };
+
+        let inventory = JSON.parse(localStorage.getItem('chronoshelf-inventory')) || [];
+
+        // Enhanced Scanner Functions with YOLOv
+        function openScanner() {
+            document.getElementById('scannerModal').style.display = 'flex';
+            document.getElementById('manualBarcode').value = '';
+            document.getElementById('manualBarcode').focus();
+            document.getElementById('scanned-barcode-preview').style.display = 'none';
+            document.getElementById('formatIndicator').textContent = 'AUTO-DETECT';
+            document.getElementById('processingTime').textContent = 'Processing: 0.8s';
+        }
+
+        function closeScanner() {
+            document.getElementById('scannerModal').style.display = 'none';
+        }
+
+        async function processManualBarcode() {
+            const barcode = document.getElementById('manualBarcode').value.trim();
+            
+            if (!barcode) {
+                showNotification('❌ Please enter a barcode', 'error');
+                return;
+            }
+
+            // Show YOLOv processing
+            document.getElementById('formatIndicator').textContent = 'YOLOv PROCESSING...';
+            
+            const validation = await BarcodeService.simulateYOLOvProcessing(barcode);
+            
+            if (!validation.isValid && validation.format !== 'UNKNOWN') {
+                showNotification(`⚠️ Invalid ${validation.format} barcode`, 'warning');
+            }
+
+            processBarcode(barcode, validation.format, validation.confidence);
+        }
+
+        async function generateRandomBarcode() {
+            const formats = ['EAN-13', 'UPC-A', 'CODE-128'];
+            const randomFormat = formats[Math.floor(Math.random() * formats.length)];
+            const randomBarcode = BarcodeService.generateBarcode(randomFormat);
+            
+            document.getElementById('manualBarcode').value = randomBarcode;
+            
+            const preview = document.getElementById('scanned-barcode-preview');
+            preview.textContent = randomBarcode;
+            preview.style.display = 'block';
+            
+            document.getElementById('formatIndicator').textContent = 'YOLOv PROCESSING...';
+            
+            const validation = await BarcodeService.simulateYOLOvProcessing(randomBarcode);
+            document.getElementById('formatIndicator').textContent = randomFormat;
+            
+            processBarcode(randomBarcode, randomFormat, validation.confidence);
+        }
+
+        async function quickScan(barcode) {
+            document.getElementById('manualBarcode').value = barcode;
+            
+            document.getElementById('formatIndicator').textContent = 'YOLOv PROCESSING...';
+            const validation = await BarcodeService.simulateYOLOvProcessing(barcode);
+            
+            document.getElementById('formatIndicator').textContent = validation.format;
+            
+            const preview = document.getElementById('scanned-barcode-preview');
+            preview.textContent = barcode;
+            preview.style.display = 'block';
+            
+            processBarcode(barcode, validation.format, validation.confidence);
+        }
+
+        function processBarcode(barcode, format = 'UNKNOWN', confidence = 0.95) {
+            const product = productDatabase[barcode];
+            const barcodeTypeElement = document.getElementById('barcode-type');
+            
+            barcodeTypeElement.textContent = `Format: ${format} | Confidence: ${(confidence * 100).toFixed(1)}%`;
+            barcodeTypeElement.style.display = 'block';
+
+            if (product) {
+                document.getElementById('product-name').value = product.name;
+                document.getElementById('barcode').value = barcode;
+                document.getElementById('product-category').value = product.category;
+                document.getElementById('batch-number').value = `BATCH-${barcode.slice(-6)}`;
+                
+                const expiryDays = 14 + Math.floor(Math.random() * 16);
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + expiryDays);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                
+                closeScanner();
+                showNotification(`✅ YOLOv Scanned: ${product.name} (${format}) - ${(confidence * 100).toFixed(1)}% confidence`);
+            } else {
+                document.getElementById('product-name').value = 'New Product';
+                document.getElementById('barcode').value = barcode;
+                document.getElementById('batch-number').value = `BATCH-${barcode.slice(-6)}`;
+                
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 21);
+                document.getElementById('expiry-date').value = expiryDate.toISOString().split('T')[0];
+                
+                closeScanner();
+                showNotification(`📦 New Product - Please enter details (${format}) - ${(confidence * 100).toFixed(1)}% confidence`);
+                document.getElementById('product-name').focus();
+                document.getElementById('product-name').select();
+            }
+
+            document.getElementById('quantity').focus();
+        }
+
+        // Enhanced Inventory Management
+        document.getElementById('product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!checkPlanLimits()) return;
+
+            const product = {
+                id: Date.now(),
+                name: document.getElementById('product-name').value,
+                barcode: document.getElementById('barcode').value,
+                category: document.getElementById('product-category').value,
+                batchNumber: document.getElementById('batch-number').value,
+                expiryDate: document.getElementById('expiry-date').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                addedDate: new Date().toISOString(),
+                barcodeFormat: BarcodeService.detectFormat(document.getElementById('barcode').value)
+            };
+
+            inventory.push(product);
+            updateDisplay();
+            saveInventory();
+            showNotification('✅ Product added to inventory!');
+
+            const currentCategory = document.getElementById('product-category').value;
+            this.reset();
+            document.getElementById('product-category').value = currentCategory;
+            document.getElementById('quantity').value = 1;
+            document.getElementById('expiry-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('barcode-type').style.display = 'none';
+        });
+
+        function updateDisplay() {
+            const list = document.getElementById('inventory-list');
+            const totalItems = document.getElementById('total-items');
+            const expiringSoon = document.getElementById('expiring-soon');
+            const totalValue = document.getElementById('total-value');
+            const wasteRisk = document.getElementById('waste-risk');
+            const itemCount = document.getElementById('item-count');
+
+            const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
+            totalItems.textContent = totalQuantity;
+
+            const today = new Date();
+            const soonCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 7;
+            }).length;
+            expiringSoon.textContent = soonCount;
+
+            const estimatedValue = inventory.reduce((sum, item) => {
+                const product = productDatabase[item.barcode];
+                const price = product ? product.price : 25;
+                return sum + (price * item.quantity);
+            }, 0);
+            totalValue.textContent = `R${estimatedValue.toFixed(2)}`;
+
+            const criticalCount = inventory.filter(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                return days <= 3;
+            }).length;
+            const wastePercentage = totalQuantity > 0 ? Math.round((criticalCount / totalQuantity) * 100) : 0;
+            wasteRisk.textContent = `${wastePercentage}%`;
+
+            itemCount.textContent = `${totalQuantity} items`;
+            checkExpiryAlerts();
+            updateAnalytics();
+
+            if (inventory.length === 0) {
+                list.innerHTML = '<div class="inventory-item">No products yet. Add your first product!</div>';
+                return;
+            }
+
+            inventory.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+            
+            list.innerHTML = inventory.map(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+                const product = productDatabase[item.barcode];
+                const price = product ? product.price : 25;
+                const value = price * item.quantity;
+                
+                let expiryClass = '';
+                if (days <= 2) expiryClass = 'expiry-critical';
+                else if (days <= 5) expiryClass = 'expiry-warning';
+
+                return `
+                    <div class="inventory-item ${expiryClass}">
+                        <strong>${item.name}</strong><br>
+                        <small>
+                            ${item.barcode ? '📊 ' + item.barcode + ' • ' : ''}
+                            🏷️ ${item.category} •
+                            ${item.batchNumber ? '<span class="batch-number">#' + item.batchNumber + '</span> • ' : ''}
+                            📦 ${item.quantity} units •
+                            R${value.toFixed(2)} •
+                            <span>⏰ ${days} days</span>
+                        </small>
+                        <button onclick="removeItem(${item.id})" style="float: right; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAnalytics() {
+            const analyticsContainer = document.getElementById('analytics-container');
+            const chart = document.getElementById('analytics-chart');
+
+            if (inventory.length === 0) {
+                analyticsContainer.style.display = 'none';
+                return;
+            }
+
+            analyticsContainer.style.display = 'block';
+            const categories = {};
+
+            inventory.forEach(item => {
+                if (!categories[item.category]) {
+                    categories[item.category] = 0;
+                }
+                categories[item.category] += item.quantity;
+            });
+
+            const maxQuantity = Math.max(...Object.values(categories));
+            chart.innerHTML = '';
+
+            Object.entries(categories).forEach(([category, quantity]) => {
+                const height = maxQuantity > 0 ? (quantity / maxQuantity) * 100 : 10;
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = `${height}%`;
+
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = `${category} (${quantity})`;
+                bar.appendChild(label);
+
+                chart.appendChild(bar);
+            });
+        }
+
+        function checkExpiryAlerts() {
+            const today = new Date();
+            let criticalCount = 0;
+
+            inventory.forEach(item => {
+                const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - today) / (1000 * 60 * 60 * 24));
+                if (daysUntilExpiry <= 2) {
+                    criticalCount++;
+                }
+            });
+
+            if (criticalCount > 0) {
+                showNotification(`🚨 ${criticalCount} items CRITICAL - expiring in 2 days or less!`, 'error');
+            }
+        }
+
+        function removeItem(id) {
+            inventory = inventory.filter(item => item.id !== id);
+            updateDisplay();
+            saveInventory();
+            showNotification('🗑️ Item removed from inventory');
+        }
+
+        function saveInventory() {
+            localStorage.setItem('chronoshelf-inventory', JSON.stringify(inventory));
+        }
+
+        function exportData() {
+            const data = {
+                inventory: inventory,
+                exportDate: new Date().toISOString(),
+                totalItems: inventory.reduce((sum, item) => sum + item.quantity, 0),
+                version: 'ChronoShelf-v4.0'
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chronoshelf-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('💾 Data exported successfully!');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.inventory && Array.isArray(data.inventory)) {
+                        if (confirm(`Import ${data.inventory.length} items? This will replace current data.`)) {
+                            inventory = data.inventory;
+                            updateDisplay();
+                            saveInventory();
+                            showNotification('✅ Data imported successfully!');
+                        }
+                    } else {
+                        showNotification('❌ Invalid backup file format', 'error');
+                    }
+                } catch (error) {
+                    showNotification('❌ Error reading backup file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearData() {
+            if (confirm('Clear ALL inventory data? This cannot be undone.')) {
+                inventory = [];
+                localStorage.removeItem('chronoshelf-inventory');
+                updateDisplay();
+                showNotification('🗑️ All inventory data cleared');
+            }
+        }
+
+        function checkPlanLimits() {
+            const user = AuthService.currentUser;
+            if (user && user.plan === 'free-trial') {
+                if (inventory.length >= 50) {
+                    showNotification('🚨 Free trial limited to 50 products. Upgrade to add more.', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Enhanced UI Functions
+        function showAuthForm(formType) {
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(formType + 'Form').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            
+            AuthService.login(email, password);
+        }
+
+        function register() {
+            const businessName = document.getElementById('registerBusiness').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const plan = document.getElementById('registerPlan').value;
+            
+            if (!businessName || !email || !password) {
+                showNotification('❌ Please fill in all fields', 'error');
+                return;
+            }
+            
+            AuthService.register(businessName, email, password, plan);
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            showNotification(`📧 Password reset link sent to ${email}`);
+        }
+
+        function logout() {
+            AuthService.logout();
+        }
+
+        function showBilling() {
+            showAuthForm('pricing');
+            showAuthScreen();
+        }
+
+        function showNotification(msg, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = msg;
+            notification.className = 'notification';
+            
+            if (type === 'warning') {
+                notification.classList.add('warning');
+            } else if (type === 'error') {
+                notification.classList.add('error');
+            }
+            
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function showLoading(buttonId) {
+            const button = document.querySelector(`[onclick="${buttonId}()"]`);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<span class="loading"></span> Processing...';
+            }
+        }
+
+        function hideLoading(buttonId) {
+            const button = document.querySelector(`[onclick="${buttonId}()"]`);
+            if (button) {
+                button.disabled = false;
+                if (buttonId === 'login') {
+                    button.innerHTML = '<span class="btn-icon">🔐</span> Login';
+                } else if (buttonId === 'register') {
+                    button.innerHTML = '<span class="btn-icon">🚀</span> Start Free Trial';
+                }
+            }
+        }
+
+        // Make functions global
+        window.removeItem = removeItem;
+        window.saveInventory = saveInventory;
+        window.clearData = clearData;
+        window.openScanner = openScanner;
+        window.closeScanner = closeScanner;
+        window.processManualBarcode = processManualBarcode;
+        window.generateRandomBarcode = generateRandomBarcode;
+        window.quickScan = quickScan;
+        window.exportData = exportData;
+        window.importData = importData;
+    </script>
+</body>
+</html>
